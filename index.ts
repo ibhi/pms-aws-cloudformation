@@ -1,5 +1,4 @@
 import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag } from "cloudform";
-import { Ref } from "cloudform/types/functions";
 
 export default cloudform({
     Description: 'AWS Cloudformation template for personal media center on AWS using EC2 Spot',
@@ -63,6 +62,16 @@ export default cloudform({
             }
         }
     },
+    Parameters: {
+        SourceCidr: new StringParameter({
+            Description: 'Optional - CIDR/IP range for instance ssh access - defaults to 0.0.0.0/0',
+            Default: '0.0.0.0/0'
+        }),
+        KeyName: {
+            Description: 'Description: Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instances',
+            Type: 'AWS::EC2::KeyPair::KeyName'
+        }
+    },
     Outputs: { },
     Resources: {
         VPC: new EC2.VPC({
@@ -115,5 +124,55 @@ export default cloudform({
             RouteTableId: Fn.Ref('PublicRouteTable'),
             SubnetId: Fn.Ref('PublicSubnet2')
         }).dependsOn(['PublicRouteTable', 'PublicSubnet2']),
+        // End of VPC
+
+        // Start of Spot Instance
+        SecurityGroup: new EC2.SecurityGroup({
+            GroupDescription: 'Media Server Security Group',
+            SecurityGroupIngress: [
+                new EC2.SecurityGroup.Ingress({
+                    CidrIp: Fn.Ref('SourceCidr'),
+                    FromPort: 22,
+                    ToPort: 22,
+                    IpProtocol: 'tcp'
+                }),
+                new EC2.SecurityGroup.Ingress({
+                    CidrIp: Fn.Ref('SourceCidr'),
+                    FromPort: 32400,
+                    ToPort: 32400,
+                    IpProtocol: 'tcp'
+                })
+            ],
+            VpcId: Fn.Ref('VPC')
+        }).dependsOn('VPC'),
+        LaunchTemplate: new EC2.LaunchTemplate({
+            LaunchTemplateName: 'SpotLaunchTemplate',
+            LaunchTemplateData: new EC2.LaunchTemplate.LaunchTemplateData({
+                // SecurityGroupIds: [Fn.Ref('SecurityGroup')],
+                ImageId: Fn.FindInMap('Ubuntu', Refs.Region, 'AMI'),
+                InstanceMarketOptions: new EC2.LaunchTemplate.InstanceMarketOptions({
+                    MarketType: 'spot'
+                }),
+                InstanceType: 'c5.large',
+                KeyName: Fn.Ref('KeyName'),
+                Monitoring: new EC2.LaunchTemplate.Monitoring({
+                    Enabled: true
+                }),
+                NetworkInterfaces: [
+                    new EC2.LaunchTemplate.NetworkInterface({
+                        DeviceIndex: 0,
+                        SubnetId: Fn.Ref('PublicSubnet1'),
+                        Groups: [Fn.Ref('SecurityGroup')]
+                    })
+                ],
+                // UserData: ''
+            })
+        }).dependsOn(['SecurityGroup', 'PublicSubnet1']),
+        Instance: new EC2.Instance({
+            LaunchTemplate: new EC2.Instance.LaunchTemplateSpecification({
+                LaunchTemplateId: Fn.Ref('LaunchTemplate'),
+                Version: '1'
+            })
+        }).dependsOn('LaunchTemplate')
     }
 });

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "cloudform vpc.ts > vpc.aws"
+    "generate": "cloudform index.ts > output/pms.json"
   },
   "author": "ibhi",
   "license": "MIT",
