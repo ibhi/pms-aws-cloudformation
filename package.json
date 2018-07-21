@@ -1,0 +1,15 @@
+{
+  "name": "personal-media-center-aws",
+  "version": "1.0.0",
+  "description": "AWS Cloudformation template for personal media center on AWS using EC2 Spot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate": "cloudform vpc.ts > vpc.aws"
+  },
+  "author": "ibhi",
+  "license": "MIT",
+  "devDependencies": {
+    "cloudform": "^2.2.1"
+  }
+}
