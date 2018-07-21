@@ -1,4 +1,4 @@
-import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag } from "cloudform";
+import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, NumberParameter, IAM, Value } from "cloudform";
 
 export default cloudform({
     Description: 'AWS Cloudformation template for personal media center on AWS using EC2 Spot',
@@ -70,7 +70,15 @@ export default cloudform({
         KeyName: {
             Description: 'Description: Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instances',
             Type: 'AWS::EC2::KeyPair::KeyName'
-        }
+        },
+        SpotFleetTargetCapacity: new NumberParameter({
+            Description: 'Number of EC2 Spot Instances to initially launch in the Spot Fleet',
+            Default: 1
+        }),
+        SpotPrice: new NumberParameter({
+            Description: 'Spot Instance Bid Price',
+            Default: 0.3
+        })
     },
     Outputs: { },
     Resources: {
@@ -126,7 +134,7 @@ export default cloudform({
         }).dependsOn(['PublicRouteTable', 'PublicSubnet2']),
         // End of VPC
 
-        // Start of Spot Instance
+        // Start of Spot fleet
         SecurityGroup: new EC2.SecurityGroup({
             GroupDescription: 'Media Server Security Group',
             SecurityGroupIngress: [
@@ -145,34 +153,48 @@ export default cloudform({
             ],
             VpcId: Fn.Ref('VPC')
         }).dependsOn('VPC'),
-        LaunchTemplate: new EC2.LaunchTemplate({
-            LaunchTemplateName: 'SpotLaunchTemplate',
-            LaunchTemplateData: new EC2.LaunchTemplate.LaunchTemplateData({
-                // SecurityGroupIds: [Fn.Ref('SecurityGroup')],
-                ImageId: Fn.FindInMap('Ubuntu', Refs.Region, 'AMI'),
-                InstanceMarketOptions: new EC2.LaunchTemplate.InstanceMarketOptions({
-                    MarketType: 'spot'
-                }),
-                InstanceType: 'c5.large',
-                KeyName: Fn.Ref('KeyName'),
-                Monitoring: new EC2.LaunchTemplate.Monitoring({
-                    Enabled: true
-                }),
-                NetworkInterfaces: [
-                    new EC2.LaunchTemplate.NetworkInterface({
-                        DeviceIndex: 0,
-                        SubnetId: Fn.Ref('PublicSubnet1'),
-                        Groups: [Fn.Ref('SecurityGroup')]
-                    })
-                ],
-                // UserData: ''
+
+        SpotFleetRole: new IAM.Role({
+            AssumeRolePolicyDocument: {
+                Statement: [{
+                    Effect: 'Allow',
+                    Principal: {
+                        Service: ['spotfleet.amazonaws.com']
+                    },
+                    Action: ['sts:AssumeRole']
+                }],
+                Version: '2012-10-17'
+            },
+            ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole'],
+            Path: '/'
+        }),
+        
+        SpotFleet: new EC2.SpotFleet({
+            SpotFleetRequestConfigData: new EC2.SpotFleet.SpotFleetRequestConfigData({
+                AllocationStrategy: 'diversified',
+                IamFleetRole: Fn.GetAtt('SpotFleetRole', 'Arn'),
+                SpotPrice: Fn.Ref('SpotPrice'),
+                TargetCapacity: Fn.Ref('SpotFleetTargetCapacity'),
+                TerminateInstancesWithExpiration: true,
+                LaunchSpecifications: [
+                    createLaunchSpecification('c5.large'),
+                    createLaunchSpecification('m5.large')
+                ]
             })
-        }).dependsOn(['SecurityGroup', 'PublicSubnet1']),
-        Instance: new EC2.Instance({
-            LaunchTemplate: new EC2.Instance.LaunchTemplateSpecification({
-                LaunchTemplateId: Fn.Ref('LaunchTemplate'),
-                Version: '1'
-            })
-        }).dependsOn('LaunchTemplate')
+        }).dependsOn('SpotFleetRole')
     }
 });
+
+function createLaunchSpecification(instanceType: Value<string>) {
+    return new EC2.SpotFleet.SpotFleetLaunchSpecification({
+        ImageId: Fn.FindInMap('Ubuntu', Refs.Region, 'AMI'),
+        InstanceType: instanceType,
+        KeyName: Fn.Ref('KeyName'),
+        Monitoring: new EC2.SpotFleet.SpotFleetMonitoring({
+            Enabled: true
+        }),
+        SecurityGroups: [ new EC2.SpotFleet.GroupIdentifier({ GroupId: Fn.Ref('SecurityGroup') }) ],
+        SubnetId: Fn.Join(',', [Fn.Ref('PublicSubnet1'), Fn.Ref('PublicSubnet2')]),
+        // UserData: ''
+    })
+}
