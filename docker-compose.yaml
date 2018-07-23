@@ -108,3 +108,17 @@ services:
       - VIRTUAL_HOST=nzbget.${HOSTNAME}
       - VIRTUAL_PORT=6789
     restart: always
+
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '${DATA_DIRECTORY_PATH}/portainer_data:/data'
+    ports:
+      - '9000:9000'
+    env_file: uidgid.env
+    environment:
+      - VIRTUAL_HOST=portainer.${HOSTNAME}
+      - VIRTUAL_PORT=9000
+    restart: always

@@ -20,6 +20,22 @@ file = /var/log/syslog
 log_group_name = \${CloudWatchLogsGroup}
 log_stream_name = pms/var/log/syslog
 datetime_format = %b %d %H:%M:%S
+initial_position = start_of_file
+
+[/var/log/docker]
+file = /var/log/docker
+log_group_name = \${CloudWatchLogsGroup}
+log_stream_name = pms/var/log/docker
+datetime_format = %Y-%m-%dT%H:%M:%S.%f
+initial_position = start_of_file
+
+[/var/log/cloud-init-output]
+file = /var/log/cloud-init-output.log
+log_group_name = \${CloudWatchLogsGroup}
+log_stream_name = pms/var/log/cloud-init-output
+datetime_format = %Y-%m-%dT%H:%M:%S.%f
+initial_position = start_of_file
+
 EOF
 
 cd /tmp && curl -sO https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
@@ -50,7 +66,6 @@ cd pms-aws-cloudformation
 npm install
 node gdrive.js
 cd ..
-
 
 # Mount rclone
 mkdir -p /var/log/rclone
@@ -103,6 +118,13 @@ EOF
 
 systemctl enable rclone.service
 systemctl daemon-reload
+systemctl start rclone.service
+
+export DATA_DIRECTORY_PATH=/media
+export HOSTNAME=$(curl http://169.254.169.254/latest/meta-data/public-hostname)
+
+cd pms-aws-cloudformation
+docker-compose up
 `;
 
 export default cloudform({
