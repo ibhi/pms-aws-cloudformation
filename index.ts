@@ -1,4 +1,106 @@
-import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, NumberParameter, IAM, Value } from "cloudform";
+import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, NumberParameter, IAM, Value, Logs } from "cloudform";
+
+const USER_DATA: string = `#!/bin/bash -xe
+apt-get update
+apt-get upgrade -y
+apt-get install unzip -y
+apt-get install python -y
+apt-get install docker.io -y
+apt-get install docker-compose -y
+curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Setup logs
+cat <<EOF > /tmp/awslogs.conf
+[general]
+state_file = /var/awslogs/state/agent-state
+
+[/var/log/syslog]
+file = /var/log/syslog
+log_group_name = \${CloudWatchLogsGroup}
+log_stream_name = pms/var/log/syslog
+datetime_format = %b %d %H:%M:%S
+EOF
+
+cd /tmp && curl -sO https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py
+python /tmp/awslogs-agent-setup.py -n -r \${AWS::Region} -c /tmp/awslogs.conf
+
+# Setup and mount EBS as cache folder for rclone
+fstype=\`file -s /dev/nvme1n1\`
+if [ "$fstype" == "/dev/nvme1n1: data" ]
+then
+mkfs -t ext4 /dev/nvme1n1
+fi
+mkdir -p /cache
+chmod 750 /cache
+mount /dev/nvme1n1 /cache
+chmod -R 750 /cache
+chown -R ubuntu:ubuntu /cache/
+echo "/dev/nvme1n1 /cache ext4 defaults,nofail 0 2" >> /etc/fstab
+
+# Install rclone
+curl https://rclone.org/install.sh | bash
+
+# Configure rclone
+mkdir -p /home/ubuntu/.config/rclone
+chown -R ubuntu:ubuntu /home/ubuntu/.config/
+
+git clone https://github.com/ibhi/pms-aws-cloudformation.git
+cd pms-aws-cloudformation
+node gdrive.js
+
+# Mount rclone
+mkdir -p /var/log/rclone
+mkdir -p /cache/uploads
+mkdir -p /media
+chown -R ubuntu:ubuntu /cache/uploads/
+chown -R ubuntu:ubuntu /media
+
+cat <<EOF > /etc/systemd/system/rclone.service
+[Unit]
+Description=Mount and cache Google drive to /media
+After=syslog.target local-fs.target network.target
+[Service]
+Environment=RCLONEHOME=/home/ubuntu/.config/rclone
+Environment=MOUNTTO=/media
+Environment=LOGS=/var/log/rclone
+Environment=UPLOADS=/cache/uploads
+Type=simple
+User=root
+ExecStartPre=/bin/mkdir -p \${MOUNTTO}
+ExecStartPre=/bin/mkdir -p \${LOGS}
+ExecStartPre=/bin/mkdir -p \${UPLOADS}
+ExecStart=/usr/bin/rclone mount \
+  --rc \
+  --log-file \${LOGS}/rclone.log \
+  --log-level INFO \
+  --umask 022 \
+  --allow-non-empty \
+  --allow-other \
+  --fuse-flag sync_read \
+  --tpslimit 10 \
+  --tpslimit-burst 10 \
+  --dir-cache-time=160h \
+  --buffer-size=64M \
+  --attr-timeout=1s \
+  --vfs-read-chunk-size=2M \
+  --vfs-read-chunk-size-limit=2G \
+  --vfs-cache-max-age=5m \
+  --vfs-cache-mode=writes \
+  --cache-dir \${UPLOADS} \
+  --config \${RCLONEHOME}/rclone.conf \
+  Gdrive:Media \${MOUNTTO}
+ExecStop=/bin/fusermount -u -z \${MOUNTTO}
+ExecStop=/bin/rmdir \${MOUNTTO}
+Restart=always
+[Install]
+WantedBy=multi-user.target
+
+EOF
+
+systemctl enable rclone.service
+systemctl daemon-reload
+`;
 
 export default cloudform({
     Description: 'AWS Cloudformation template for personal media center on AWS using EC2 Spot',
@@ -13,7 +115,7 @@ export default cloudform({
             VPC: {
                 CIDR: '10.0.0.0/16'
             }
-        },        
+        },
         Ubuntu: {
             'ap-south-1': {
                 AMI: 'ami-188fba77'
@@ -80,7 +182,7 @@ export default cloudform({
             Default: 0.3
         })
     },
-    Outputs: { },
+    Outputs: {},
     Resources: {
         VPC: new EC2.VPC({
             CidrBlock: Fn.FindInMap('CidrMappings', 'VPC', 'CIDR'),
@@ -100,7 +202,7 @@ export default cloudform({
             Tags: [
                 new ResourceTag('Name', 'Public Route Table')
             ]
-        }).dependsOn('VPC'),
+        }).dependsOn(['VPC', 'AttachGateway']),
         PublicRoute: new EC2.Route({
             DestinationCidrBlock: '0.0.0.0/0',
             GatewayId: Fn.Ref('InternetGateway'),
@@ -154,6 +256,10 @@ export default cloudform({
             VpcId: Fn.Ref('VPC')
         }).dependsOn('VPC'),
 
+        CloudWatchLogsGroup: new Logs.LogGroup({
+            RetentionInDays: 7
+        }),
+
         SpotFleetRole: new IAM.Role({
             AssumeRolePolicyDocument: {
                 Statement: [{
@@ -168,10 +274,18 @@ export default cloudform({
             ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole'],
             Path: '/'
         }),
-        
+
+        SpotFleetInstanceRole: createSpotFleetInstanceRole(),
+
+        SpotFleetInstanceProfile: new IAM.InstanceProfile({
+            Path: '/',
+            Roles: [Fn.Ref('SpotFleetInstanceRole')]
+        }).dependsOn('SpotFleetInstanceRole'),
+
         SpotFleet: new EC2.SpotFleet({
             SpotFleetRequestConfigData: new EC2.SpotFleet.SpotFleetRequestConfigData({
-                AllocationStrategy: 'diversified',
+                AllocationStrategy: 'lowestPrice',
+                Type: 'maintain',
                 IamFleetRole: Fn.GetAtt('SpotFleetRole', 'Arn'),
                 SpotPrice: Fn.Ref('SpotPrice'),
                 TargetCapacity: Fn.Ref('SpotFleetTargetCapacity'),
@@ -181,20 +295,93 @@ export default cloudform({
                     createLaunchSpecification('m5.large')
                 ]
             })
-        }).dependsOn('SpotFleetRole')
+        }).dependsOn(['SpotFleetRole', 'PublicSubnet1', 'PublicSubnet2', 'SecurityGroup'])
     }
 });
 
 function createLaunchSpecification(instanceType: Value<string>) {
     return new EC2.SpotFleet.SpotFleetLaunchSpecification({
+        IamInstanceProfile: new EC2.SpotFleet.IamInstanceProfileSpecification({
+            Arn: Fn.GetAtt('SpotFleetInstanceProfile', 'Arn')
+        }),
         ImageId: Fn.FindInMap('Ubuntu', Refs.Region, 'AMI'),
         InstanceType: instanceType,
         KeyName: Fn.Ref('KeyName'),
         Monitoring: new EC2.SpotFleet.SpotFleetMonitoring({
             Enabled: true
         }),
-        SecurityGroups: [ new EC2.SpotFleet.GroupIdentifier({ GroupId: Fn.Ref('SecurityGroup') }) ],
+        SecurityGroups: [new EC2.SpotFleet.GroupIdentifier({ GroupId: Fn.Ref('SecurityGroup') })],
         SubnetId: Fn.Join(',', [Fn.Ref('PublicSubnet1'), Fn.Ref('PublicSubnet2')]),
-        // UserData: ''
+        BlockDeviceMappings: [
+            new EC2.SpotFleet.BlockDeviceMapping({
+                DeviceName: '/dev/sdk',
+                Ebs: new EC2.SpotFleet.EbsBlockDevice({
+                    VolumeSize: 40,
+                    VolumeType: 'gp2',
+                    DeleteOnTermination: true
+                })
+            })
+        ],
+        UserData: Fn.Base64(Fn.Sub(
+            USER_DATA, 
+            {
+                'RCLONEHOME': '/home/ubuntu/.config/rclone',
+                'MOUNTTO': '/media',
+                'LOGS': '/var/log/rclone',
+                'UPLOADS': '/cache/uploads'
+            }
+        ))
     })
+}
+
+function createSpotFleetInstanceRole() {
+    return {
+        Properties: {
+            AssumeRolePolicyDocument: {
+                'Statement': [{
+                    Effect: 'Allow',
+                    Principal: {
+                        Service: ['ec2.amazonaws.com']
+                    },
+                    Action: ['sts:AssumeRole']
+                }],
+                Version: '2012-10-17'
+            },
+            ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole'],
+            Path: '/',
+            Policies: [
+                {
+                    PolicyDocument: {
+                        Version: '2012-10-17',
+                        Statement: [{
+                            Effect: 'Allow',
+                            Action: [
+                                "logs:CreateLogGroup",
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents",
+                                "logs:DescribeLogStreams"
+                            ],
+                            Resource: ['arn:aws:logs:*:*:*']
+                        }]
+                    },
+                    PolicyName: 'CloudWatchLogsPolicy'
+                },
+                {
+                    PolicyDocument: {
+                        Version : '2012-10-17',
+                        Statement : [
+                            {
+                                Effect: 'Allow',
+                                Action: 'secretsmanager:GetSecretValue',
+                                Resource: 'arn:aws:secretsmanager:ap-south-1:782677160809:secret:gdrive-token-EFr0g3'
+                            }
+                        ]
+                    },
+                    PolicyName: 'SecretsManagerPolicy'
+                }
+            ]
+        },
+        Type: 'AWS::IAM::Role'
+
+    }
 }

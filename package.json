@@ -5,11 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "cloudform index.ts > output/pms.json"
+    "generate": "cloudform index.ts > output/pms.json",
+    "lint": "cfn-lint validate output/pms.json",
+    "start": "npm run generate && npm run lint"
   },
   "author": "ibhi",
   "license": "MIT",
   "devDependencies": {
+    "cfn-lint": "^1.7.4",
     "cloudform": "^2.2.1"
   }
 }
