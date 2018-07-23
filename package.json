@@ -12,6 +12,7 @@
   "author": "ibhi",
   "license": "MIT",
   "devDependencies": {
+    "aws-sdk": "^2.279.1",
     "cfn-lint": "^1.7.4",
     "cloudform": "^2.2.1"
   }
