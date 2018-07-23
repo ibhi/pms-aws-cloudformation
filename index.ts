@@ -47,7 +47,9 @@ chown -R ubuntu:ubuntu /home/ubuntu/.config/
 
 git clone https://github.com/ibhi/pms-aws-cloudformation.git
 cd pms-aws-cloudformation
+npm install
 node gdrive.js
+cd ..
 
 # Mount rclone
 mkdir -p /var/log/rclone
