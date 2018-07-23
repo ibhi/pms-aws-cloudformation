@@ -273,8 +273,8 @@ export default cloudform({
                 }),
                 new EC2.SecurityGroup.Ingress({
                     CidrIp: Fn.Ref('SourceCidr'),
-                    FromPort: 32400,
-                    ToPort: 32400,
+                    FromPort: 80,
+                    ToPort: 80,
                     IpProtocol: 'tcp'
                 })
             ],
