@@ -62,6 +62,7 @@ mkdir -p /home/ubuntu/.config/rclone
 chown -R ubuntu:ubuntu /home/ubuntu/.config/
 
 export EC2_INSTANCE_ID="\`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id || die \"wget instance-id has failed: $?\"\`"
+export ALLOCATION_ID=\${ElasticIp.AllocationId}
 
 git clone https://github.com/ibhi/pms-aws-cloudformation.git
 cd pms-aws-cloudformation
@@ -330,11 +331,14 @@ export default cloudform({
             'ElasticIp'
         ]),
 
-        ElasticIp: new EC2.EIP(),
+        ElasticIp: new EC2.EIP({
+            Domain: 'vpc'
+        }),
     }
 });
 
 function createLaunchSpecification(instanceType: Value<string>) {
+    var allocationId = Fn.GetAtt('ElasticIp', 'AllocationId');
     return new EC2.SpotFleet.SpotFleetLaunchSpecification({
         IamInstanceProfile: new EC2.SpotFleet.IamInstanceProfileSpecification({
             Arn: Fn.GetAtt('SpotFleetInstanceProfile', 'Arn')
@@ -364,7 +368,7 @@ function createLaunchSpecification(instanceType: Value<string>) {
                 'MOUNTTO': '/media',
                 'LOGS': '/var/log/rclone',
                 'UPLOADS': '/cache/uploads',
-                'ALLOCATION_ID': Fn.GetAtt('ElasticIp', 'AllocationId') 
+                // 'ALLOCATIONID': Fn.GetAtt('ElasticIp', 'AllocationId')
             }
         ))
     })
@@ -414,6 +418,19 @@ function createSpotFleetInstanceRole() {
                         ]
                     },
                     PolicyName: 'SecretsManagerPolicy'
+                },
+                {
+                    PolicyDocument: {
+                        Version : '2012-10-17',
+                        Statement : [
+                            {
+                                Effect: 'Allow',
+                                Action: 'ec2:AssociateAddress',
+                                Resource: '*'
+                            }
+                        ]
+                    },
+                    PolicyName: 'AssociateElasticIpAddress'
                 }
             ]
         },
