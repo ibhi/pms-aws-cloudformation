@@ -326,7 +326,8 @@ export default cloudform({
             'SpotFleetRole', 
             'PublicSubnet1', 
             'PublicSubnet2', 
-            'SecurityGroup'
+            'SecurityGroup',
+            'ElasticIp'
         ]),
 
         ElasticIp: new EC2.EIP(),
