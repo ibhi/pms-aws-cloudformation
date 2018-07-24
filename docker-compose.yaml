@@ -29,7 +29,7 @@ services:
       - '32414:32414/udp'
     env_file: uidgid.env
     environment:
-      - VIRTUAL_HOST=plex.${HOSTNAME}
+      - VIRTUAL_HOST=plex.${HOST_NAME}
       - VIRTUAL_PORT=32400
     restart: always
     
@@ -45,7 +45,7 @@ services:
       - '8989:8989'
     env_file: uidgid.env
     environment:
-      - VIRTUAL_HOST=sonarr.${HOSTNAME}
+      - VIRTUAL_HOST=sonarr.${HOST_NAME}
       - VIRTUAL_PORT=8989
     restart: always
 
@@ -60,7 +60,7 @@ services:
       - '8181:8181'
     env_file: uidgid.env
     environment:
-      - VIRTUAL_HOST=plexpy.${HOSTNAME}
+      - VIRTUAL_HOST=plexpy.${HOST_NAME}
       - VIRTUAL_PORT=8181
     restart: always
 
@@ -76,7 +76,7 @@ services:
       - '7878:7878'
     env_file: uidgid.env
     environment:
-      - VIRTUAL_HOST=radarr.${HOSTNAME}
+      - VIRTUAL_HOST=radarr.${HOST_NAME}
       - VIRTUAL_PORT=7878
     restart: always
 
@@ -90,7 +90,7 @@ services:
       - '3579:3579'
     env_file: uidgid.env
     environment:
-      - VIRTUAL_HOST=ombi.${HOSTNAME}
+      - VIRTUAL_HOST=ombi.${HOST_NAME}
       - VIRTUAL_PORT=3579
     restart: always
 
@@ -105,7 +105,7 @@ services:
       - '6789:6789'
     env_file: uidgid.env
     environment:
-      - VIRTUAL_HOST=nzbget.${HOSTNAME}
+      - VIRTUAL_HOST=nzbget.${HOST_NAME}
       - VIRTUAL_PORT=6789
     restart: always
 
@@ -119,6 +119,6 @@ services:
       - '9000:9000'
     env_file: uidgid.env
     environment:
-      - VIRTUAL_HOST=portainer.${HOSTNAME}
+      - VIRTUAL_HOST=portainer.${HOST_NAME}
       - VIRTUAL_PORT=9000
     restart: always

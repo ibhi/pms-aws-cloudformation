@@ -124,7 +124,8 @@ systemctl daemon-reload
 systemctl start rclone.service
 
 export DATA_DIRECTORY_PATH=/media
-export HOSTNAME=$(curl http://169.254.169.254/latest/meta-data/public-hostname)
+# export HOSTNAME=$(curl http://169.254.169.254/latest/meta-data/public-hostname)
+export HOST_NAME=ibhi.tk
 
 cd pms-aws-cloudformation
 docker-compose up
