@@ -61,6 +61,8 @@ curl https://rclone.org/install.sh | bash
 mkdir -p /home/ubuntu/.config/rclone
 chown -R ubuntu:ubuntu /home/ubuntu/.config/
 
+export EC2_INSTANCE_ID="\`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id || die \"wget instance-id has failed: $?\"\`"
+
 git clone https://github.com/ibhi/pms-aws-cloudformation.git
 cd pms-aws-cloudformation
 npm install
@@ -320,7 +322,17 @@ export default cloudform({
                     createLaunchSpecification('m5.large')
                 ]
             })
-        }).dependsOn(['SpotFleetRole', 'PublicSubnet1', 'PublicSubnet2', 'SecurityGroup'])
+        }).dependsOn([
+            'SpotFleetRole', 
+            'PublicSubnet1', 
+            'PublicSubnet2', 
+            'SecurityGroup', 
+            'NetworkInterface'
+        ]),
+
+        // NetworkInterface: createNetworkInterface(),
+
+        ElasticIp: new EC2.EIP(),
     }
 });
 
@@ -353,7 +365,8 @@ function createLaunchSpecification(instanceType: Value<string>) {
                 'RCLONEHOME': '/home/ubuntu/.config/rclone',
                 'MOUNTTO': '/media',
                 'LOGS': '/var/log/rclone',
-                'UPLOADS': '/cache/uploads'
+                'UPLOADS': '/cache/uploads',
+                'ALLOCATION_ID': Fn.GetAtt('ElasticIp', 'AllocationId') 
             }
         ))
     })
