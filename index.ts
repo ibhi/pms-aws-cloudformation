@@ -10,7 +10,11 @@ apt-get install docker-compose -y
 curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-# Associate Elaastic Ip to this spot instance
+# Configure rclone directories
+mkdir -p /home/ubuntu/.config/rclone
+chown -R ubuntu:ubuntu /home/ubuntu/.config/
+
+# Associate Elastic Ip to this spot instance
 export EC2_INSTANCE_ID="\`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id || die \"wget instance-id has failed: $?\"\`"
 export ALLOCATION_ID=\${ElasticIp.AllocationId}
 
@@ -69,10 +73,6 @@ echo "/dev/nvme1n1 /cache ext4 defaults,nofail 0 2" >> /etc/fstab
 # Install rclone
 curl https://rclone.org/install.sh | bash
 
-# Configure rclone
-mkdir -p /home/ubuntu/.config/rclone
-chown -R ubuntu:ubuntu /home/ubuntu/.config/
-
 # Mount rclone
 mkdir -p /var/log/rclone
 mkdir -p /cache/uploads
@@ -127,7 +127,6 @@ systemctl daemon-reload
 systemctl start rclone.service
 
 export DATA_DIRECTORY_PATH=/media
-# export HOSTNAME=$(curl http://169.254.169.254/latest/meta-data/public-hostname)
 export HOST_NAME=ibhi.tk
 
 cd pms-aws-cloudformation
