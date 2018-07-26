@@ -32,6 +32,7 @@ services:
       - VIRTUAL_HOST=plex.${HOST_NAME}
       - VIRTUAL_PORT=32400
     restart: always
+    network_mode: host
     
   sonarr:
     image: linuxserver/sonarr

@@ -347,7 +347,7 @@ export default cloudform({
         WildcardRecordSet: new Route53.RecordSet({
             Type: 'A',
             HostedZoneId: Fn.Ref('HostedZone'),
-            Name: `*.${Fn.Ref('DomainName')}`,
+            Name: Fn.Join('.', [ '*', Fn.Ref('DomainName')]),
             TTL: '300',
             ResourceRecords: [
                 Fn.Ref('ElasticIp')
@@ -357,7 +357,7 @@ export default cloudform({
         ProxyRecordSet: new Route53.RecordSet({
             Type: 'A',
             HostedZoneId: Fn.Ref('HostedZone'),
-            Name: `proxy.${Fn.Ref('DomainName')}`,
+            Name: Fn.Join('.', [ 'proxy', Fn.Ref('DomainName')]),
             TTL: '300',
             ResourceRecords: [
                 Fn.Ref('ElasticIp')
