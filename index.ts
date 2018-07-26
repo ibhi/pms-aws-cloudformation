@@ -18,11 +18,14 @@ chown -R ubuntu:ubuntu /home/ubuntu/.config/
 export EC2_INSTANCE_ID="\`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id || die \"wget instance-id has failed: $?\"\`"
 export ALLOCATION_ID=\${ElasticIp.AllocationId}
 
+cd /tmp
 git clone https://github.com/ibhi/pms-aws-cloudformation.git
 cd pms-aws-cloudformation
 npm install
 node gdrive.js
 cd ..
+cd ..
+
 # Wait for the Elastic IP association to complete
 sleep 1m
 
@@ -128,8 +131,8 @@ systemctl start rclone.service
 
 export DATA_DIRECTORY_PATH=/media
 export HOST_NAME=ibhi.tk
-
-cd pms-aws-cloudformation
+# Docker containers setup
+cd /tmp/pms-aws-cloudformation
 docker-compose up
 `;
 
