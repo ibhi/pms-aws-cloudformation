@@ -23,13 +23,13 @@ services:
       - '5353:5353/udp'
       - '32400:32400/udp'
       - '32469:32469/udp'
-
     env_file: uidgid.env
     environment:
       - VIRTUAL_HOST=plex.${HOST_NAME}
       - VIRTUAL_PORT=32400
       - VERSION = public
     restart: always
+    network_mode: host
     
   sonarr:
     image: linuxserver/sonarr
