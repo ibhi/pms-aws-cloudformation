@@ -13,7 +13,7 @@ services:
     image: linuxserver/plex
     container_name: plex
     volumes:
-      - '${DATA_DIRECTORY_PATH}/config/plex:/config'
+      - '/cache/config/plex:/config'
       - '${DATA_DIRECTORY_PATH}/TV:/data/tvshows'
       - '${DATA_DIRECTORY_PATH}/Movies:/data/movies'
     ports:
@@ -35,7 +35,7 @@ services:
     image: linuxserver/sonarr
     container_name: sonarr
     volumes:
-      - '${DATA_DIRECTORY_PATH}/config/sonarr:/config'
+      - '/cache/config/sonarr:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/TV:/tv'
       - '${DATA_DIRECTORY_PATH}/Downloads/complete:/downloads'
@@ -51,7 +51,7 @@ services:
     image: linuxserver/plexpy
     container_name: plexpy
     volumes:
-      - '${DATA_DIRECTORY_PATH}/config/plexpy:/config'
+      - 'cache/config/plexpy:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/config/plex/Library/Application Support/Plex Media Server/Logs:/logs:ro'
     ports:
@@ -66,7 +66,7 @@ services:
     image: linuxserver/radarr
     container_name: radarr
     volumes:
-      - '${DATA_DIRECTORY_PATH}/config/radarr:/config'
+      - '/cache/config/radarr:/config'
       - '${DATA_DIRECTORY_PATH}/Movies:/movies'
       - '${DATA_DIRECTORY_PATH}/Downloads/complete:/downloads'
       - '/etc/localtime:/etc/localtime:ro'
@@ -78,25 +78,25 @@ services:
       - VIRTUAL_PORT=7878
     restart: always
 
-  ombi:
-    image: linuxserver/ombi
-    container_name: ombi
-    volumes:
-      - '${DATA_DIRECTORY_PATH}/config/ombi:/config'
-      - '/etc/localtime:/etc/localtime:ro'
-    ports:
-      - '3579:3579'
-    env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=ombi.${HOST_NAME}
-      - VIRTUAL_PORT=3579
-    restart: always
+  # ombi:
+  #   image: linuxserver/ombi
+  #   container_name: ombi
+  #   volumes:
+  #     - '${DATA_DIRECTORY_PATH}/config/ombi:/config'
+  #     - '/etc/localtime:/etc/localtime:ro'
+  #   ports:
+  #     - '3579:3579'
+  #   env_file: uidgid.env
+  #   environment:
+  #     - VIRTUAL_HOST=ombi.${HOST_NAME}
+  #     - VIRTUAL_PORT=3579
+  #   restart: always
 
   nzbget:
     image: linuxserver/nzbget
     container_name: nzbget
     volumes:
-      - '${DATA_DIRECTORY_PATH}/config/nzbget:/config'
+      - '/cache/config/nzbget:/config'
       - '${DATA_DIRECTORY_PATH}/Downloads/complete:/complete'
       - '${DATA_DIRECTORY_PATH}/Downloads:/downloads'
     ports:
@@ -112,7 +112,7 @@ services:
     container_name: portainer
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '${DATA_DIRECTORY_PATH}/portainer_data:/data'
+      - 'cache/portainer_data:/data'
     ports:
       - '9000:9000'
     env_file: uidgid.env

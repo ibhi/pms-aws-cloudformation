@@ -131,7 +131,6 @@ systemctl start rclone.service
 
 export DATA_DIRECTORY_PATH=/media
 export HOST_NAME=ibhi.tk
-
 # Docker containers setup
 cd /tmp/pms-aws-cloudformation
 docker-compose up
