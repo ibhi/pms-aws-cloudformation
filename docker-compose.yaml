@@ -51,7 +51,7 @@ services:
     image: linuxserver/plexpy
     container_name: plexpy
     volumes:
-      - 'cache/config/plexpy:/config'
+      - '/cache/config/plexpy:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/config/plex/Library/Application Support/Plex Media Server/Logs:/logs:ro'
     ports:
@@ -112,7 +112,7 @@ services:
     container_name: portainer
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - 'cache/portainer_data:/data'
+      - '/cache/portainer_data:/data'
     ports:
       - '9000:9000'
     env_file: uidgid.env
