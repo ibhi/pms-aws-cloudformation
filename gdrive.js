@@ -11,6 +11,8 @@ var AWS = require('aws-sdk'),
     binarySecretData;
 var fs = require('fs');
 
+AWS.config.update({region: region});
+
 // Create a Secrets Manager client
 var client = new AWS.SecretsManager({
     endpoint: endpoint,

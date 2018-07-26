@@ -1,4 +1,4 @@
-import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, NumberParameter, IAM, Value, Logs } from "cloudform";
+import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, NumberParameter, IAM, Value, Logs, Route53 } from "cloudform";
 
 const USER_DATA: string = `#!/bin/bash -xe
 apt-get update
@@ -209,7 +209,11 @@ export default cloudform({
         SpotPrice: new NumberParameter({
             Description: 'Spot Instance Bid Price',
             Default: 0.3
-        })
+        }),
+        DomainName: new StringParameter({
+            Description: 'Enter your custom domain name',
+            Default: 'ibhi.tk'
+        }),
     },
     Outputs: {},
     Resources: {
@@ -335,6 +339,30 @@ export default cloudform({
         ElasticIp: new EC2.EIP({
             Domain: 'vpc'
         }),
+
+        HostedZone: new Route53.HostedZone({
+            Name: Fn.Ref('DomainName')
+        }),
+
+        WildcardRecordSet: new Route53.RecordSet({
+            Type: 'A',
+            HostedZoneId: Fn.Ref('HostedZone'),
+            Name: `*.${Fn.Ref('DomainName')}`,
+            TTL: '300',
+            ResourceRecords: [
+                Fn.Ref('ElasticIp')
+            ]
+        }).dependsOn(['ElasticIp', 'HostedZone']),
+
+        ProxyRecordSet: new Route53.RecordSet({
+            Type: 'A',
+            HostedZoneId: Fn.Ref('HostedZone'),
+            Name: `proxy.${Fn.Ref('DomainName')}`,
+            TTL: '300',
+            ResourceRecords: [
+                Fn.Ref('ElasticIp')
+            ]
+        }).dependsOn(['ElasticIp', 'HostedZone'])
     }
 });
 
@@ -426,7 +454,12 @@ function createSpotFleetInstanceRole() {
                         Statement : [
                             {
                                 Effect: 'Allow',
-                                Action: 'ec2:AssociateAddress',
+                                Action: [
+                                    "ec2:DescribeAddresses",
+                                    "ec2:AllocateAddress",
+                                    "ec2:DescribeInstances",
+                                    "ec2:AssociateAddress"
+                                ],
                                 Resource: '*'
                             }
                         ]
