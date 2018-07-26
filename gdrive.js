@@ -69,7 +69,7 @@ var params = {
 };
 ec2.associateAddress(params, function (err, data) {
     if (err) throw err; // an error occurred
-    else console.log(data);           // successful response
+    else console.log('Associated Elastic Ip: ', data);           // successful response
     /*
     data = {
      AssociationId: "eipassoc-2bebb745"

@@ -10,6 +10,18 @@ apt-get install docker-compose -y
 curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
+# Associate Elaastic Ip to this spot instance
+export EC2_INSTANCE_ID="\`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id || die \"wget instance-id has failed: $?\"\`"
+export ALLOCATION_ID=\${ElasticIp.AllocationId}
+
+git clone https://github.com/ibhi/pms-aws-cloudformation.git
+cd pms-aws-cloudformation
+npm install
+node gdrive.js
+cd ..
+# Wait for the Elastic IP association to complete
+sleep 1m
+
 # Setup logs
 cat <<EOF > /tmp/awslogs.conf
 [general]
@@ -60,15 +72,6 @@ curl https://rclone.org/install.sh | bash
 # Configure rclone
 mkdir -p /home/ubuntu/.config/rclone
 chown -R ubuntu:ubuntu /home/ubuntu/.config/
-
-export EC2_INSTANCE_ID="\`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id || die \"wget instance-id has failed: $?\"\`"
-export ALLOCATION_ID=\${ElasticIp.AllocationId}
-
-git clone https://github.com/ibhi/pms-aws-cloudformation.git
-cd pms-aws-cloudformation
-npm install
-node gdrive.js
-cd ..
 
 # Mount rclone
 mkdir -p /var/log/rclone
