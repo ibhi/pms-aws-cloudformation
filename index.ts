@@ -101,22 +101,19 @@ ExecStart=/usr/bin/rclone mount \
   --rc \
   --log-file \${LOGS}/rclone.log \
   --log-level INFO \
-  --umask 022 \
+  --umask 002 \
   --allow-non-empty \
   --allow-other \
-  --fuse-flag sync_read \
-  --tpslimit 10 \
-  --tpslimit-burst 10 \
   --dir-cache-time=160h \
-  --buffer-size=64M \
+  --buffer-size=500M \
   --attr-timeout=1s \
-  --vfs-read-chunk-size=2M \
-  --vfs-read-chunk-size-limit=2G \
-  --vfs-cache-max-age=5m \
-  --vfs-cache-mode=writes \
-  --cache-dir \${UPLOADS} \
+  --cache-chunk-size=10M \
+  --cache-info-age=168h \
+  --cache-workers=5 \
+  --cache-tmp-upload-path \${UPLOADS} \
+  --cache-tmp-wait-time 60m \
   --config \${RCLONEHOME}/rclone.conf \
-  Gdrive:Media \${MOUNTTO}
+  Gcache: \${MOUNTTO}
 ExecStop=/bin/fusermount -u -z \${MOUNTTO}
 ExecStop=/bin/rmdir \${MOUNTTO}
 Restart=always
