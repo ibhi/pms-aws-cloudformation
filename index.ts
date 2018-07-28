@@ -90,9 +90,11 @@ curl https://rclone.org/install.sh | bash
 # Mount rclone
 mkdir -p /var/log/rclone
 mkdir -p /cache/uploads
+mkdir -p /cache/rclone
 mkdir -p /media
 chown -R ubuntu:ubuntu /var/log/rclone
 chown -R ubuntu:ubuntu /cache/uploads/
+chown -R ubuntu:ubuntu /cache/rclone/
 chown -R ubuntu:ubuntu /media
 
 cat <<EOF > /etc/systemd/system/rclone.service
@@ -120,6 +122,8 @@ ExecStart=/usr/bin/rclone mount \
   --buffer-size=0M \
   --attr-timeout=1s \
   --cache-chunk-size=10M \
+  --cache-chunk-path=/cache/rclone \
+  --cache-db-path=/cache/rclone
   --cache-info-age=168h \
   --cache-workers=10 \
   --cache-tmp-upload-path \${UPLOADS} \
@@ -302,6 +306,12 @@ export default cloudform({
                     CidrIp: Fn.Ref('SourceCidr'),
                     FromPort: 80,
                     ToPort: 80,
+                    IpProtocol: 'tcp'
+                }),
+                new EC2.SecurityGroup.Ingress({
+                    CidrIp: Fn.Ref('SourceCidr'),
+                    FromPort: 32400,
+                    ToPort: 32400,
                     IpProtocol: 'tcp'
                 })
             ],
