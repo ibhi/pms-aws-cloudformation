@@ -27,7 +27,7 @@ cd ..
 cd ..
 
 # Wait for the Elastic IP association to complete
-sleep 1m
+sleep 15s
 
 # Setup logs
 cat <<EOF > /tmp/awslogs.conf
@@ -80,6 +80,7 @@ curl https://rclone.org/install.sh | bash
 mkdir -p /var/log/rclone
 mkdir -p /cache/uploads
 mkdir -p /media
+chown -R ubuntu:ubuntu /var/log/rclone
 chown -R ubuntu:ubuntu /cache/uploads/
 chown -R ubuntu:ubuntu /media
 
@@ -105,18 +106,22 @@ ExecStart=/usr/bin/rclone mount \
   --allow-non-empty \
   --allow-other \
   --dir-cache-time=160h \
-  --buffer-size=500M \
+  --buffer-size=0M \
   --attr-timeout=1s \
   --cache-chunk-size=10M \
   --cache-info-age=168h \
-  --cache-workers=5 \
+  --cache-workers=10 \
   --cache-tmp-upload-path \${UPLOADS} \
   --cache-tmp-wait-time 60m \
+  --vfs-cache-mode=writes
   --config \${RCLONEHOME}/rclone.conf \
   Gcache: \${MOUNTTO}
 ExecStop=/bin/fusermount -u -z \${MOUNTTO}
 ExecStop=/bin/rmdir \${MOUNTTO}
 Restart=always
+User=ubuntu
+Group=ubuntu
+
 [Install]
 WantedBy=multi-user.target
 

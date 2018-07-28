@@ -97,8 +97,8 @@ services:
     container_name: nzbget
     volumes:
       - '/cache/config/nzbget:/config'
-      - '${DATA_DIRECTORY_PATH}/Downloads/complete:/complete'
-      - '${DATA_DIRECTORY_PATH}/Downloads:/downloads'
+      - '/cache/data/Downloads/complete:/complete'
+      - '/cache/data/Downloads:/downloads'
     ports:
       - '6789:6789'
     env_file: uidgid.env
