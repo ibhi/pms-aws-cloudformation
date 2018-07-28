@@ -113,7 +113,7 @@ ExecStart=/usr/bin/rclone mount \
   --cache-workers=10 \
   --cache-tmp-upload-path \${UPLOADS} \
   --cache-tmp-wait-time 60m \
-  --vfs-cache-mode=writes
+  --vfs-cache-mode=writes \
   --config \${RCLONEHOME}/rclone.conf \
   Gcache: \${MOUNTTO}
 ExecStop=/bin/fusermount -u -z \${MOUNTTO}

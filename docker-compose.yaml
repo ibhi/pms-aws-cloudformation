@@ -38,7 +38,8 @@ services:
       - '/cache/config/sonarr:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/TV:/tv'
-      - '${DATA_DIRECTORY_PATH}/Downloads/complete:/downloads'
+      - '/cache/data/Downloads/complete:/downloads'
+      - '/cache/uploads:/uploads'
     ports:
       - '8989:8989'
     env_file: uidgid.env
@@ -68,7 +69,8 @@ services:
     volumes:
       - '/cache/config/radarr:/config'
       - '${DATA_DIRECTORY_PATH}/Movies:/movies'
-      - '${DATA_DIRECTORY_PATH}/Downloads/complete:/downloads'
+      - '/cache/data/Downloads/complete:/downloads'
+      - '/cache/uploads:/uploads'
       - '/etc/localtime:/etc/localtime:ro'
     ports:
       - '7878:7878'
