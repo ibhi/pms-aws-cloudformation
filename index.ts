@@ -26,6 +26,17 @@ node gdrive.js
 cd ..
 cd ..
 
+cat <<EOF > /etc/fuse.conf
+# /etc/fuse.conf - Configuration file for Filesystem in Userspace (FUSE)
+
+# Set the maximum number of FUSE mounts allowed to non-root users.
+# The default is 1000.
+#mount_max = 1000
+
+# Allow non-root users to specify the allow_other or allow_root mount options.
+user_allow_other
+EOF
+
 # Wait for the Elastic IP association to complete
 sleep 15s
 
@@ -131,6 +142,7 @@ systemctl enable rclone.service
 systemctl daemon-reload
 systemctl start rclone.service
 
+# Docker compose
 export DATA_DIRECTORY_PATH=/media
 export HOST_NAME=ibhi.tk
 # Docker containers setup

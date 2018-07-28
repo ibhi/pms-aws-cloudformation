@@ -16,6 +16,7 @@ services:
       - '/cache/config/plex:/config'
       - '${DATA_DIRECTORY_PATH}/TV:/data/tvshows'
       - '${DATA_DIRECTORY_PATH}/Movies:/data/movies'
+      - '${DATA_DIRECTORY_PATH}/Music:/data/music'
     ports:
       - '32469:32469'
       - '32400:32400'
@@ -30,6 +31,20 @@ services:
       - VERSION = public
     restart: always
     network_mode: host
+
+  nzbget:
+    image: linuxserver/nzbget
+    container_name: nzbget
+    volumes:
+      - '/cache/config/nzbget:/config'
+      - '/cache/data/Downloads:/downloads'
+    ports:
+      - '6789:6789'
+    env_file: uidgid.env
+    environment:
+      - VIRTUAL_HOST=nzbget.${HOST_NAME}
+      - VIRTUAL_PORT=6789
+    restart: always
     
   sonarr:
     image: linuxserver/sonarr
@@ -38,7 +53,7 @@ services:
       - '/cache/config/sonarr:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/TV:/tv'
-      - '/cache/data/Downloads/complete:/downloads'
+      - '/cache/data/Downloads:/downloads'
       - '/cache/uploads:/uploads'
     ports:
       - '8989:8989'
@@ -46,6 +61,23 @@ services:
     environment:
       - VIRTUAL_HOST=sonarr.${HOST_NAME}
       - VIRTUAL_PORT=8989
+    restart: always
+  
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    volumes:
+      - '/cache/config/radarr:/config'
+      - '${DATA_DIRECTORY_PATH}/Movies:/movies'
+      - '/cache/data/Downloads:/downloads'
+      - '/cache/uploads:/uploads'
+      - '/etc/localtime:/etc/localtime:ro'
+    ports:
+      - '7878:7878'
+    env_file: uidgid.env
+    environment:
+      - VIRTUAL_HOST=radarr.${HOST_NAME}
+      - VIRTUAL_PORT=7878
     restart: always
 
   plexpy:
@@ -63,23 +95,6 @@ services:
       - VIRTUAL_PORT=8181
     restart: always
 
-  radarr:
-    image: linuxserver/radarr
-    container_name: radarr
-    volumes:
-      - '/cache/config/radarr:/config'
-      - '${DATA_DIRECTORY_PATH}/Movies:/movies'
-      - '/cache/data/Downloads/complete:/downloads'
-      - '/cache/uploads:/uploads'
-      - '/etc/localtime:/etc/localtime:ro'
-    ports:
-      - '7878:7878'
-    env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=radarr.${HOST_NAME}
-      - VIRTUAL_PORT=7878
-    restart: always
-
   # ombi:
   #   image: linuxserver/ombi
   #   container_name: ombi
@@ -93,21 +108,6 @@ services:
   #     - VIRTUAL_HOST=ombi.${HOST_NAME}
   #     - VIRTUAL_PORT=3579
   #   restart: always
-
-  nzbget:
-    image: linuxserver/nzbget
-    container_name: nzbget
-    volumes:
-      - '/cache/config/nzbget:/config'
-      - '/cache/data/Downloads/complete:/complete'
-      - '/cache/data/Downloads:/downloads'
-    ports:
-      - '6789:6789'
-    env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=nzbget.${HOST_NAME}
-      - VIRTUAL_PORT=6789
-    restart: always
 
   portainer:
     image: portainer/portainer
