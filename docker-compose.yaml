@@ -54,7 +54,6 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/TV:/tv'
       - '/cache/data/Downloads:/downloads'
-      - '/cache/uploads:/uploads'
     ports:
       - '8989:8989'
     env_file: uidgid.env
@@ -70,7 +69,6 @@ services:
       - '/cache/config/radarr:/config'
       - '${DATA_DIRECTORY_PATH}/Movies:/movies'
       - '/cache/data/Downloads:/downloads'
-      - '/cache/uploads:/uploads'
       - '/etc/localtime:/etc/localtime:ro'
     ports:
       - '7878:7878'
@@ -86,7 +84,7 @@ services:
     volumes:
       - '/cache/config/plexpy:/config'
       - '/etc/localtime:/etc/localtime:ro'
-      - '${DATA_DIRECTORY_PATH}/config/plex/Library/Application Support/Plex Media Server/Logs:/logs:ro'
+      - '/cache/config/plex/Library/Application Support/Plex Media Server/Logs:/logs:ro'
     ports:
       - '8181:8181'
     env_file: uidgid.env
@@ -95,26 +93,12 @@ services:
       - VIRTUAL_PORT=8181
     restart: always
 
-  # ombi:
-  #   image: linuxserver/ombi
-  #   container_name: ombi
-  #   volumes:
-  #     - '${DATA_DIRECTORY_PATH}/config/ombi:/config'
-  #     - '/etc/localtime:/etc/localtime:ro'
-  #   ports:
-  #     - '3579:3579'
-  #   env_file: uidgid.env
-  #   environment:
-  #     - VIRTUAL_HOST=ombi.${HOST_NAME}
-  #     - VIRTUAL_PORT=3579
-  #   restart: always
-
   portainer:
     image: portainer/portainer
     container_name: portainer
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '/cache/portainer_data:/data'
+      - '/cache/config/portainer_data:/data'
     ports:
       - '9000:9000'
     env_file: uidgid.env

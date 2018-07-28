@@ -112,25 +112,20 @@ ExecStartPre=/bin/mkdir -p \${MOUNTTO}
 ExecStartPre=/bin/mkdir -p \${LOGS}
 ExecStartPre=/bin/mkdir -p \${UPLOADS}
 ExecStart=/usr/bin/rclone mount \
-  --rc \
-  --log-file \${LOGS}/rclone.log \
-  --log-level INFO \
-  --umask 002 \
-  --allow-non-empty \
-  --allow-other \
-  --dir-cache-time=160h \
-  --buffer-size=0M \
-  --attr-timeout=1s \
-  --cache-chunk-size=10M \
-  --cache-chunk-path=/cache/rclone \
-  --cache-db-path=/cache/rclone
-  --cache-info-age=168h \
-  --cache-workers=10 \
-  --cache-tmp-upload-path \${UPLOADS} \
-  --cache-tmp-wait-time 60m \
-  --vfs-cache-mode=writes \
-  --config \${RCLONEHOME}/rclone.conf \
-  Gcache: \${MOUNTTO}
+    --rc \
+    --log-file /var/log/rclone/rclone.log \
+    --log-level INFO \
+    --umask 002 \
+    --allow-other \
+    --vfs-cache-mode full \
+    --dir-cache-time=96h  \
+    --buffer-size=500M \
+    --vfs-cache-max-age 48h \
+    --vfs-read-chunk-size 200M \
+    --vfs-read-chunk-size-limit 1G  \
+    --cache-dir=/cache/rclone  \
+    --config /home/ubuntu/.config/rclone/rclone.conf \
+    Gdrive:Media \${MOUNTTO}
 ExecStop=/bin/fusermount -u -z \${MOUNTTO}
 ExecStop=/bin/rmdir \${MOUNTTO}
 Restart=always
