@@ -1,13 +1,27 @@
 version: '2'
 services:
-  nginx-proxy:
-    image: 'jwilder/nginx-proxy:latest'
-    container_name: nginx-proxy
-    volumes:
-      - '/var/run/docker.sock:/tmp/docker.sock:ro'
-    ports:
-      - '80:80'
+  # nginx-proxy:
+  #   image: 'jwilder/nginx-proxy:latest'
+  #   container_name: nginx-proxy
+  #   volumes:
+  #     - '/var/run/docker.sock:/tmp/docker.sock:ro'
+  #   ports:
+  #     - '80:80'
+  #   restart: always
+
+  traefik:
+    image: traefik:1.5.4
     restart: always
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/pms-aws-cloudformation/traefik.toml:/traefik.toml
+      - /tmp/pms-aws-cloudformation/acme.json:/acme.json
+    container_name: traefik
 
   plex:
     image: linuxserver/plex
@@ -17,20 +31,31 @@ services:
       - '${DATA_DIRECTORY_PATH}/TV:/data/tvshows'
       - '${DATA_DIRECTORY_PATH}/Movies:/data/movies'
       - '${DATA_DIRECTORY_PATH}/Music:/data/music'
-    ports:
-      - '32469:32469'
-      - '32400:32400'
-      - '1900:1900/udp'
-      - '5353:5353/udp'
-      - '32400:32400/udp'
-      - '32469:32469/udp'
+    # ports:
+    #   - '32469:32469'
+    #   - '32400:32400'
+    #   - '1900:1900/udp'
+    #   - '5353:5353/udp'
+    #   - '32400:32400/udp'
+    #   - '32469:32469/udp'
+    expose: 
+      - '32400'
     env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=plex.${HOST_NAME}
-      - VIRTUAL_PORT=32400
-      - VERSION = public
+    # environment:
+    #   - VIRTUAL_HOST=plex.${HOST_NAME}
+    #   - VIRTUAL_PORT=32400
+    #   - VERSION = public
     restart: always
     network_mode: host
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=plex'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:plex.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=32400'
 
   nzbget:
     image: linuxserver/nzbget
@@ -38,13 +63,24 @@ services:
     volumes:
       - '/cache/config/nzbget:/config'
       - '/cache/data/Downloads:/downloads'
-    ports:
-      - '6789:6789'
+    # ports:
+    #   - '6789:6789'
+    expose: 
+      - '6789'
     env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=nzbget.${HOST_NAME}
-      - VIRTUAL_PORT=6789
+    # environment:
+    #   - VIRTUAL_HOST=nzbget.${HOST_NAME}
+    #   - VIRTUAL_PORT=6789
     restart: always
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=nzbget'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:nzbget.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=6789'
     
   sonarr:
     image: linuxserver/sonarr
@@ -54,13 +90,24 @@ services:
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/TV:/tv'
       - '/cache/data/Downloads:/downloads'
-    ports:
-      - '8989:8989'
+    # ports:
+    #   - '8989:8989'
+    expose:
+      - '8989'
     env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=sonarr.${HOST_NAME}
-      - VIRTUAL_PORT=8989
+    # environment:
+    #   - VIRTUAL_HOST=sonarr.${HOST_NAME}
+    #   - VIRTUAL_PORT=8989
     restart: always
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=sonarr'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:sonarr.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=8989'
   
   radarr:
     image: linuxserver/radarr
@@ -70,13 +117,24 @@ services:
       - '${DATA_DIRECTORY_PATH}/Movies:/movies'
       - '/cache/data/Downloads:/downloads'
       - '/etc/localtime:/etc/localtime:ro'
-    ports:
-      - '7878:7878'
+    # ports:
+    #   - '7878:7878'
+    expose: 
+      - '7878'
     env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=radarr.${HOST_NAME}
-      - VIRTUAL_PORT=7878
+    # environment:
+    #   - VIRTUAL_HOST=radarr.${HOST_NAME}
+    #   - VIRTUAL_PORT=7878
     restart: always
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=radarr'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:radarr.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=7878'
 
   plexpy:
     image: linuxserver/plexpy
@@ -85,13 +143,24 @@ services:
       - '/cache/config/plexpy:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '/cache/config/plex/Library/Application Support/Plex Media Server/Logs:/logs:ro'
-    ports:
-      - '8181:8181'
+    # ports:
+    #   - '8181:8181'
+    expose:
+      - '8181'
     env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=plexpy.${HOST_NAME}
-      - VIRTUAL_PORT=8181
+    # environment:
+    #   - VIRTUAL_HOST=plexpy.${HOST_NAME}
+    #   - VIRTUAL_PORT=8181
     restart: always
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=plexpy'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:plexpy.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=8181'
 
   portainer:
     image: portainer/portainer
@@ -99,10 +168,25 @@ services:
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
       - '/cache/config/portainer_data:/data'
-    ports:
-      - '9000:9000'
+    # ports:
+    #   - '9000:9000'
+    expose:
+      - '9000'
     env_file: uidgid.env
-    environment:
-      - VIRTUAL_HOST=portainer.${HOST_NAME}
-      - VIRTUAL_PORT=9000
+    # environment:
+    #   - VIRTUAL_HOST=portainer.${HOST_NAME}
+    #   - VIRTUAL_PORT=9000
     restart: always
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=portainer'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:portainer.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=9000'
+
+networks:
+  web:
+    external: true
