@@ -1,16 +1,8 @@
 version: '2'
 services:
-  # nginx-proxy:
-  #   image: 'jwilder/nginx-proxy:latest'
-  #   container_name: nginx-proxy
-  #   volumes:
-  #     - '/var/run/docker.sock:/tmp/docker.sock:ro'
-  #   ports:
-  #     - '80:80'
-  #   restart: always
 
   traefik:
-    image: traefik:1.5.4
+    image: traefik:latest
     restart: always
     ports:
       - 80:80
@@ -20,33 +12,33 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/pms-aws-cloudformation/traefik.toml:/traefik.toml
-      - /tmp/pms-aws-cloudformation/acme.json:/acme.json
+      - ${CONFIG_DIRECTORY_PATH}/letsencrypt/acme.json:/acme.json
     container_name: traefik
 
   plex:
     image: linuxserver/plex
     container_name: plex
     volumes:
-      - '/cache/config/plex:/config'
+      - '${CONFIG_DIRECTORY_PATH}/plex:/config'
       - '${DATA_DIRECTORY_PATH}/TV:/data/tvshows'
       - '${DATA_DIRECTORY_PATH}/Movies:/data/movies'
       - '${DATA_DIRECTORY_PATH}/Music:/data/music'
-    # ports:
-    #   - '32469:32469'
-    #   - '32400:32400'
-    #   - '1900:1900/udp'
-    #   - '5353:5353/udp'
-    #   - '32400:32400/udp'
-    #   - '32469:32469/udp'
-    expose: 
-      - '32400'
+    ports: 
+      - "32400:32400/tcp"
+      - "3005:3005/tcp"
+      - "8324:8324/tcp"
+      - "32469:32469/tcp"
+      - "1900:1900/udp"
+      - "32410:32410/udp"
+      - "32412:32412/udp"
+      - "32413:32413/udp"
+      - "32414:32414/udp"
     env_file: uidgid.env
-    # environment:
-    #   - VIRTUAL_HOST=plex.${HOST_NAME}
-    #   - VIRTUAL_PORT=32400
-    #   - VERSION = public
     restart: always
-    network_mode: host
+    # network_mode: host
+    networks: 
+      - web
+      - default
     labels:
       - 'traefik.backend=plex'
       - 'traefik.docker.network=web'
@@ -58,16 +50,11 @@ services:
     image: linuxserver/nzbget
     container_name: nzbget
     volumes:
-      - '/cache/config/nzbget:/config'
-      - '/cache/data/Downloads:/downloads'
-    # ports:
-    #   - '6789:6789'
+      - '${CONFIG_DIRECTORY_PATH}/nzbget:/config'
+      - '${DOWNLOADS_DIRECTORY_PATH}:/downloads'
     expose: 
       - '6789'
     env_file: uidgid.env
-    # environment:
-    #   - VIRTUAL_HOST=nzbget.${HOST_NAME}
-    #   - VIRTUAL_PORT=6789
     restart: always
     networks: 
       - web
@@ -83,18 +70,13 @@ services:
     image: linuxserver/sonarr
     container_name: sonarr
     volumes:
-      - '/cache/config/sonarr:/config'
+      - '${CONFIG_DIRECTORY_PATH}/sonarr:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '${DATA_DIRECTORY_PATH}/TV:/tv'
-      - '/cache/data/Downloads:/downloads'
-    # ports:
-    #   - '8989:8989'
+      - '${DOWNLOADS_DIRECTORY_PATH}:/downloads'
     expose:
       - '8989'
     env_file: uidgid.env
-    # environment:
-    #   - VIRTUAL_HOST=sonarr.${HOST_NAME}
-    #   - VIRTUAL_PORT=8989
     restart: always
     networks: 
       - web
@@ -110,18 +92,13 @@ services:
     image: linuxserver/radarr
     container_name: radarr
     volumes:
-      - '/cache/config/radarr:/config'
+      - '${CONFIG_DIRECTORY_PATH}/radarr:/config'
       - '${DATA_DIRECTORY_PATH}/Movies:/movies'
-      - '/cache/data/Downloads:/downloads'
+      - '${DOWNLOADS_DIRECTORY_PATH}:/downloads'
       - '/etc/localtime:/etc/localtime:ro'
-    # ports:
-    #   - '7878:7878'
     expose: 
       - '7878'
     env_file: uidgid.env
-    # environment:
-    #   - VIRTUAL_HOST=radarr.${HOST_NAME}
-    #   - VIRTUAL_PORT=7878
     restart: always
     networks: 
       - web
@@ -137,17 +114,12 @@ services:
     image: linuxserver/plexpy
     container_name: plexpy
     volumes:
-      - '/cache/config/plexpy:/config'
+      - '${CONFIG_DIRECTORY_PATH}/plexpy:/config'
       - '/etc/localtime:/etc/localtime:ro'
       - '/cache/config/plex/Library/Application Support/Plex Media Server/Logs:/logs:ro'
-    # ports:
-    #   - '8181:8181'
     expose:
       - '8181'
     env_file: uidgid.env
-    # environment:
-    #   - VIRTUAL_HOST=plexpy.${HOST_NAME}
-    #   - VIRTUAL_PORT=8181
     restart: always
     networks: 
       - web
@@ -159,20 +131,34 @@ services:
       - 'traefik.enable=true'
       - 'traefik.port=8181'
 
+  organizr:
+    image: lsiocommunity/organizr
+    container_name: organizr
+    volumes:
+      - '${CONFIG_DIRECTORY_PATH}/organizr:/config'
+    expose:
+      - '80'
+    env_file: uidgid.env
+    restart: always
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=organizr'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:home.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=80'
+
   portainer:
     image: portainer/portainer
     container_name: portainer
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
-      - '/cache/config/portainer_data:/data'
-    # ports:
-    #   - '9000:9000'
+      - '${CONFIG_DIRECTORY_PATH}/portainer_data:/data'
     expose:
       - '9000'
     env_file: uidgid.env
-    # environment:
-    #   - VIRTUAL_HOST=portainer.${HOST_NAME}
-    #   - VIRTUAL_PORT=9000
     restart: always
     networks: 
       - web
