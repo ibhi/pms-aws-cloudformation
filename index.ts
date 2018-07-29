@@ -146,6 +146,11 @@ export DATA_DIRECTORY_PATH=/media
 export CONFIG_DIRECTORY_PATH=/cache/config
 export DOWNLOADS_DIRECTORY_PATH=/cache/data/Downloads
 export HOST_NAME=ibhi.tk
+mkdir -p /cache/config/letsencrypt
+chown -R ubuntu:ubuntu /cache/config/letsencrypt
+touch /cache/config/letsencrypt/acme.json
+chown ubuntu:ubuntu /cache/config/letsencrypt/acme.json
+chmod 600 /cache/config/letsencrypt/acme.json
 # Docker containers setup
 cd /tmp/pms-aws-cloudformation
 docker network create web
@@ -235,6 +240,10 @@ export default cloudform({
             Description: 'Enter your custom domain name',
             Default: 'ibhi.tk'
         }),
+        CacheSnapshotId: new StringParameter({
+            Description: 'Enter your cache snapshot id to restore',
+            Default: 'snap-01f85e7c0b6f9b82f'
+        })
     },
     Outputs: {},
     Resources: {
@@ -419,7 +428,8 @@ function createLaunchSpecification(instanceType: Value<string>) {
                 Ebs: new EC2.SpotFleet.EbsBlockDevice({
                     VolumeSize: 40,
                     VolumeType: 'gp2',
-                    DeleteOnTermination: true
+                    DeleteOnTermination: true,
+                    SnapshotId: Fn.Ref('CacheSnapshotId')
                 })
             })
         ],
