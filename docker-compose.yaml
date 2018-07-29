@@ -47,9 +47,6 @@ services:
     #   - VERSION = public
     restart: always
     network_mode: host
-    networks: 
-      - web
-      - default
     labels:
       - 'traefik.backend=plex'
       - 'traefik.docker.network=web'
