@@ -1,25 +1,31 @@
-const region = "ap-south-1";
+const region = 'ap-south-1';
 
 var AWS = require('aws-sdk');
 AWS.config.update({ region: region });
 
-const cloudformation = new AWS.cloudformation();
+const cloudformation = new AWS.CloudFormation();
 
 exports.handler = (event, context, callback) => {
-    const ec2 = new AWS.EC2({ apiVersion: '2016-11-15' });
+    console.log('Event', event);
+    const messageId = event.Records[0].Sns.MessageId;
+    const message = event.Records[0].Sns.Message;
+
+    if(message === 'CREATE') {
+        createStack(callback);
+    } else if(message === 'DELETE') {
+        deleteStack(callback);
+    } else {
+        callback(err);
+    }
+
+};
+
+function createStack(callback) {
     const params = {
         StackName: 'pms', /* required */
         Capabilities: [
             'CAPABILITY_NAMED_IAM'
         ],
-        // ClientRequestToken: 'STRING_VALUE',
-        // DisableRollback: true || false,
-        // EnableTerminationProtection: true || false,
-        // NotificationARNs: [
-        //     'STRING_VALUE',
-        //     /* more items */
-        // ],
-        // OnFailure: DO_NOTHING | ROLLBACK | DELETE,
         Parameters: [
             {
                 ParameterKey: 'NetworkStackName',
@@ -51,23 +57,7 @@ exports.handler = (event, context, callback) => {
             }
             /* more items */
         ],
-        ResourceTypes: [
-            'AWS::*',
-            /* more items */
-        ],
-        RoleARN: 'arn:aws:iam::782677160809:role/pms-cloudformation-role1',
-        // RollbackConfiguration: {
-        //     MonitoringTimeInMinutes: 0,
-        //     RollbackTriggers: [
-        //         {
-        //             Arn: 'STRING_VALUE', /* required */
-        //             Type: 'STRING_VALUE' /* required */
-        //         },
-        //         /* more items */
-        //     ]
-        // },
-        // StackPolicyBody: 'STRING_VALUE',
-        // StackPolicyURL: 'STRING_VALUE',
+        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}',
         Tags: [
             {
                 Key: 'Name', /* required */
@@ -75,11 +65,8 @@ exports.handler = (event, context, callback) => {
             },
             /* more items */
         ],
-        // TemplateBody: 'STRING_VALUE',
-        TemplateURL: 'https://s3.ap-south-1.amazonaws.com/cf-templates-1g7z2nh3wiuu3-ap-south-1/2018211xcZ-pms.json',
-        // TimeoutInMinutes: 0
+        TemplateURL: 'https://s3.ap-south-1.amazonaws.com/cf-templates-1g7z2nh3wiuu3-ap-south-1/pms.json',
     };
-
     cloudformation.createStack(params, (err, data) => {
         if (err) {
             console.log(err, err.stack); // an error occurred
@@ -89,5 +76,21 @@ exports.handler = (event, context, callback) => {
             callback(null, data);
         }
     });
+}
 
-};
+function deleteStack(callback) {
+    const params = {
+        // Todo: make it dynamic
+        StackName: 'pms',
+        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}'
+    };
+    cloudformation.deleteStack(params, (err, data) => {
+        if (err) {
+            console.log(err, err.stack); // an error occurred
+            callback(err);
+        } else {
+            console.log(data);           // successful response
+            callback(null, data);
+        }
+    });
+}
