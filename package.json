@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "cloudform index.ts > output/pms.json",
-    "lint": "cfn-lint validate output/pms.json",
+    "generate-vpc": "cloudform vpc.ts > output/vpc.json",
+    "generate-pms": "cloudform pms.ts > output/pms.json",
+    "generate": "npm run generate-vpc && npm run generate-pms",
+    "lint": "cfn-lint validate output/vpc.json && cfn-lint validate output/pms.json",
     "start": "npm run generate && npm run lint"
   },
   "author": "ibhi",
@@ -14,6 +16,6 @@
   "devDependencies": {
     "aws-sdk": "^2.279.1",
     "cfn-lint": "^1.7.4",
-    "cloudform": "^2.2.1"
+    "cloudform": "^2.3.0"
   }
 }

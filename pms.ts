@@ -220,6 +220,13 @@ export default cloudform({
         }
     },
     Parameters: {
+        NetworkStackName: new StringParameter({
+            Description: "Name of an active CloudFormation stack that contains the networking resources, such as the subnet and security group, that will be used in this stack.",
+            MinLength: 1,
+            MaxLength: 255,
+            // AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$",
+            Default: 'pms-vpc'
+        }),
         SourceCidr: new StringParameter({
             Description: 'Optional - CIDR/IP range for instance ssh access - defaults to 0.0.0.0/0',
             Default: '0.0.0.0/0'
@@ -228,13 +235,9 @@ export default cloudform({
             Description: 'Description: Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instances',
             Type: 'AWS::EC2::KeyPair::KeyName'
         },
-        SpotFleetTargetCapacity: new NumberParameter({
-            Description: 'Number of EC2 Spot Instances to initially launch in the Spot Fleet',
-            Default: 1
-        }),
         SpotPrice: new NumberParameter({
             Description: 'Spot Instance Bid Price',
-            Default: 0.3
+            Default: 0.1
         }),
         DomainName: new StringParameter({
             Description: 'Enter your custom domain name',
@@ -243,93 +246,14 @@ export default cloudform({
         CacheSnapshotId: new StringParameter({
             Description: 'Enter your cache snapshot id to restore',
             Default: 'snap-01f85e7c0b6f9b82f'
+        }),
+        GDriveSecret: new StringParameter({
+            Description: 'Enter GDrive Secret Id from AWS Secrets Manager',
+            Default: 'arn:aws:secretsmanager:ap-south-1:782677160809:secret:gdrive-token-EFr0g3'
         })
     },
     Outputs: {},
     Resources: {
-        VPC: new EC2.VPC({
-            CidrBlock: Fn.FindInMap('CidrMappings', 'VPC', 'CIDR'),
-            EnableDnsHostnames: true,
-            EnableDnsSupport: true,
-            Tags: [
-                new ResourceTag('Name', 'VPC for Personal Media Server on AWS')
-            ]
-        }),
-        InternetGateway: new EC2.InternetGateway().dependsOn('VPC'),
-        AttachGateway: new EC2.VPCGatewayAttachment({
-            InternetGatewayId: Fn.Ref('InternetGateway'),
-            VpcId: Fn.Ref('VPC')
-        }).dependsOn(['VPC', 'InternetGateway']),
-        PublicRouteTable: new EC2.RouteTable({
-            VpcId: Fn.Ref('VPC'),
-            Tags: [
-                new ResourceTag('Name', 'Public Route Table')
-            ]
-        }).dependsOn(['VPC', 'AttachGateway']),
-        PublicRoute: new EC2.Route({
-            DestinationCidrBlock: '0.0.0.0/0',
-            GatewayId: Fn.Ref('InternetGateway'),
-            RouteTableId: Fn.Ref('PublicRouteTable')
-        }).dependsOn(['InternetGateway', 'PublicRouteTable']),
-        PublicSubnet1: new EC2.Subnet({
-            AvailabilityZone: Fn.Select(0, Fn.GetAZs(Refs.Region)),
-            CidrBlock: Fn.FindInMap('CidrMappings', 'PublicSubnet1', 'CIDR'),
-            VpcId: Fn.Ref('VPC'),
-            MapPublicIpOnLaunch: true,
-            Tags: [
-                new ResourceTag('Name', 'Public Subnet 1')
-            ]
-        }).dependsOn(['VPC']),
-        PublicSubnet1RouteTableAssociation: new EC2.SubnetRouteTableAssociation({
-            RouteTableId: Fn.Ref('PublicRouteTable'),
-            SubnetId: Fn.Ref('PublicSubnet1')
-        }).dependsOn(['PublicRouteTable', 'PublicSubnet1']),
-        PublicSubnet2: new EC2.Subnet({
-            AvailabilityZone: Fn.Select(1, Fn.GetAZs(Refs.Region)),
-            CidrBlock: Fn.FindInMap('CidrMappings', 'PublicSubnet2', 'CIDR'),
-            VpcId: Fn.Ref('VPC'),
-            MapPublicIpOnLaunch: true,
-            Tags: [
-                new ResourceTag('Name', 'Public Subnet 2')
-            ]
-        }).dependsOn('VPC'),
-        PublicSubnet2RouteTableAssociation: new EC2.SubnetRouteTableAssociation({
-            RouteTableId: Fn.Ref('PublicRouteTable'),
-            SubnetId: Fn.Ref('PublicSubnet2')
-        }).dependsOn(['PublicRouteTable', 'PublicSubnet2']),
-        // End of VPC
-
-        // Start of Spot fleet
-        SecurityGroup: new EC2.SecurityGroup({
-            GroupDescription: 'Media Server Security Group',
-            SecurityGroupIngress: [
-                new EC2.SecurityGroup.Ingress({
-                    CidrIp: Fn.Ref('SourceCidr'),
-                    FromPort: 22,
-                    ToPort: 22,
-                    IpProtocol: 'tcp'
-                }),
-                new EC2.SecurityGroup.Ingress({
-                    CidrIp: Fn.Ref('SourceCidr'),
-                    FromPort: 80,
-                    ToPort: 80,
-                    IpProtocol: 'tcp'
-                }),
-                new EC2.SecurityGroup.Ingress({
-                    CidrIp: Fn.Ref('SourceCidr'),
-                    FromPort: 443,
-                    ToPort: 443,
-                    IpProtocol: 'tcp'
-                }),
-                new EC2.SecurityGroup.Ingress({
-                    CidrIp: Fn.Ref('SourceCidr'),
-                    FromPort: 32400,
-                    ToPort: 32400,
-                    IpProtocol: 'tcp'
-                })
-            ],
-            VpcId: Fn.Ref('VPC')
-        }).dependsOn('VPC'),
 
         CloudWatchLogsGroup: new Logs.LogGroup({
             RetentionInDays: 7
@@ -363,7 +287,7 @@ export default cloudform({
                 Type: 'maintain',
                 IamFleetRole: Fn.GetAtt('SpotFleetRole', 'Arn'),
                 SpotPrice: Fn.Ref('SpotPrice'),
-                TargetCapacity: Fn.Ref('SpotFleetTargetCapacity'),
+                TargetCapacity: 1,
                 TerminateInstancesWithExpiration: true,
                 LaunchSpecifications: [
                     createLaunchSpecification('c5.large'),
@@ -372,9 +296,6 @@ export default cloudform({
             })
         }).dependsOn([
             'SpotFleetRole', 
-            'PublicSubnet1', 
-            'PublicSubnet2', 
-            'SecurityGroup',
             'ElasticIp'
         ]),
 
@@ -382,34 +303,33 @@ export default cloudform({
             Domain: 'vpc'
         }),
 
-        HostedZone: new Route53.HostedZone({
-            Name: Fn.Ref('DomainName')
-        }),
-
         WildcardRecordSet: new Route53.RecordSet({
             Type: 'A',
-            HostedZoneId: Fn.Ref('HostedZone'),
+            HostedZoneId: Fn.ImportValue(Fn.Sub('${NetworkStackName}-HostedZone', {})),
             Name: Fn.Join('.', [ '*', Fn.Ref('DomainName')]),
             TTL: '300',
             ResourceRecords: [
                 Fn.Ref('ElasticIp')
             ]
-        }).dependsOn(['ElasticIp', 'HostedZone']),
+        }).dependsOn(['ElasticIp']),
 
         ProxyRecordSet: new Route53.RecordSet({
             Type: 'A',
-            HostedZoneId: Fn.Ref('HostedZone'),
+            HostedZoneId: Fn.ImportValue(Fn.Sub('${NetworkStackName}-HostedZone', {})),
             Name: Fn.Join('.', [ 'proxy', Fn.Ref('DomainName')]),
             TTL: '300',
             ResourceRecords: [
                 Fn.Ref('ElasticIp')
             ]
-        }).dependsOn(['ElasticIp', 'HostedZone'])
+        }).dependsOn(['ElasticIp'])
     }
 });
 
 function createLaunchSpecification(instanceType: Value<string>) {
     var allocationId = Fn.GetAtt('ElasticIp', 'AllocationId');
+    var publicSubnet1Id = Fn.ImportValue(Fn.Sub('${NetworkStackName}-PublicSubnet1', {}));
+    var publicSubnet2Id = Fn.ImportValue(Fn.Sub('${NetworkStackName}-PublicSubnet2', {}));
+    var securityGroupId = Fn.ImportValue(Fn.Sub('${NetworkStackName}-SecurityGroup', {}));
     return new EC2.SpotFleet.SpotFleetLaunchSpecification({
         IamInstanceProfile: new EC2.SpotFleet.IamInstanceProfileSpecification({
             Arn: Fn.GetAtt('SpotFleetInstanceProfile', 'Arn')
@@ -420,8 +340,8 @@ function createLaunchSpecification(instanceType: Value<string>) {
         Monitoring: new EC2.SpotFleet.SpotFleetMonitoring({
             Enabled: true
         }),
-        SecurityGroups: [new EC2.SpotFleet.GroupIdentifier({ GroupId: Fn.Ref('SecurityGroup') })],
-        SubnetId: Fn.Join(',', [Fn.Ref('PublicSubnet1'), Fn.Ref('PublicSubnet2')]),
+        SecurityGroups: [new EC2.SpotFleet.GroupIdentifier({ GroupId: securityGroupId })],
+        SubnetId: Fn.Join(',', [publicSubnet1Id, publicSubnet2Id]),
         BlockDeviceMappings: [
             new EC2.SpotFleet.BlockDeviceMapping({
                 DeviceName: '/dev/sdk',
@@ -440,7 +360,6 @@ function createLaunchSpecification(instanceType: Value<string>) {
                 'MOUNTTO': '/media',
                 'LOGS': '/var/log/rclone',
                 'UPLOADS': '/cache/uploads',
-                // 'ALLOCATIONID': Fn.GetAtt('ElasticIp', 'AllocationId')
             }
         ))
     })
