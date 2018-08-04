@@ -116,6 +116,7 @@ ExecStart=/usr/bin/rclone mount \
     --log-level INFO \
     --umask 002 \
     --allow-other \
+    --allow-non-empty \
     --vfs-cache-mode full \
     --dir-cache-time=96h  \
     --buffer-size=500M \
