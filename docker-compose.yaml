@@ -150,7 +150,7 @@ services:
   #     - 'traefik.enable=true'
   #     - 'traefik.port=80'
 
-    heimdall:
+  heimdall:
     image: linuxserver/heimdall
     container_name: heimdall
     volumes:
