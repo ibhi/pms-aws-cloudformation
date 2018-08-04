@@ -144,7 +144,7 @@ systemctl start rclone.service
 
 # Docker compose
 export DATA_DIRECTORY_PATH=/media
-export CONFIG_DIRECTORY_PATH=/cache/config
+export CONFIG_DIRECTORY_PATH=/media/config
 export DOWNLOADS_DIRECTORY_PATH=/cache/data/Downloads
 export HOST_NAME=ibhi.tk
 mkdir -p /cache/config/letsencrypt
