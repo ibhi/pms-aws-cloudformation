@@ -147,11 +147,11 @@ export CONFIG_DIRECTORY_PATH=/media/config
 export DOWNLOADS_DIRECTORY_PATH=/cache/data/Downloads
 export HOST_NAME=ibhi.tk
 
-mkdir -p $CONFIG_DIRECTORY_PATH/letsencrypt
-chown -R ubuntu:ubuntu $CONFIG_DIRECTORY_PATH/letsencrypt
-touch $CONFIG_DIRECTORY_PATH/letsencrypt/acme.json
-chown ubuntu:ubuntu $CONFIG_DIRECTORY_PATH/letsencrypt/acme.json
-chmod 600 $CONFIG_DIRECTORY_PATH/letsencrypt/acme.json
+mkdir -p /cache/data/letsencrypt
+chown -R ubuntu:ubuntu /cache/data/letsencrypt
+touch /cache/data/letsencrypt/acme.json
+chown ubuntu:ubuntu /cache/data/letsencrypt/acme.json
+chmod 600 /cache/data/letsencrypt/acme.json
 
 mkdir -p $CONFIG_DIRECTORY_PATH/plex
 mkdir -p $CONFIG_DIRECTORY_PATH/nzbget
