@@ -50,7 +50,7 @@ client.getSecretValue({ SecretId: secretName }, function (err, data) {
 
             [Gcrypt]
             type = crypt
-            remote = Gdrive:/crypt
+            remote = Gdrive:/PMS
             filename_encryption = standard
             directory_name_encryption = true
             password = ${secret.encryption_password}

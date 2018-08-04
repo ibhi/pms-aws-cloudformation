@@ -90,12 +90,12 @@ curl https://rclone.org/install.sh | bash
 
 # Mount rclone
 mkdir -p /var/log/rclone
-mkdir -p /cache/uploads
+mkdir -p /cache/data/Downloads
 mkdir -p /cache/rclone
 mkdir -p /media
 chown -R ubuntu:ubuntu /var/log/rclone
-chown -R ubuntu:ubuntu /cache/uploads/
-chown -R ubuntu:ubuntu /cache/rclone/
+chown -R ubuntu:ubuntu /cache/data/Downloads
+chown -R ubuntu:ubuntu /cache/rclone
 chown -R ubuntu:ubuntu /media
 
 cat <<EOF > /etc/systemd/system/rclone.service
@@ -106,12 +106,10 @@ After=syslog.target local-fs.target network.target
 Environment=RCLONEHOME=/home/ubuntu/.config/rclone
 Environment=MOUNTTO=/media
 Environment=LOGS=/var/log/rclone
-Environment=UPLOADS=/cache/uploads
 Type=simple
 User=root
 ExecStartPre=/bin/mkdir -p \${MOUNTTO}
 ExecStartPre=/bin/mkdir -p \${LOGS}
-ExecStartPre=/bin/mkdir -p \${UPLOADS}
 ExecStart=/usr/bin/rclone mount \
     --rc \
     --log-file /var/log/rclone/rclone.log \
@@ -147,11 +145,28 @@ export DATA_DIRECTORY_PATH=/media
 export CONFIG_DIRECTORY_PATH=/media/config
 export DOWNLOADS_DIRECTORY_PATH=/cache/data/Downloads
 export HOST_NAME=ibhi.tk
-mkdir -p /media/config/letsencrypt
-chown -R ubuntu:ubuntu /media/config/letsencrypt
-touch /media/config/letsencrypt/acme.json
-chown ubuntu:ubuntu /media/config/letsencrypt/acme.json
-chmod 600 /media/config/letsencrypt/acme.json
+
+mkdir -p $CONFIG_DIRECTORY_PATH/letsencrypt
+chown -R ubuntu:ubuntu $CONFIG_DIRECTORY_PATH/letsencrypt
+touch $CONFIG_DIRECTORY_PATH/letsencrypt/acme.json
+chown ubuntu:ubuntu $CONFIG_DIRECTORY_PATH/letsencrypt/acme.json
+chmod 600 $CONFIG_DIRECTORY_PATH/letsencrypt/acme.json
+
+mkdir -p $CONFIG_DIRECTORY_PATH/plex
+mkdir -p $CONFIG_DIRECTORY_PATH/nzbget
+mkdir -p $CONFIG_DIRECTORY_PATH/sonarr
+mkdir -p $CONFIG_DIRECTORY_PATH/radarr
+mkdir -p $CONFIG_DIRECTORY_PATH/plexpy
+mkdir -p $CONFIG_DIRECTORY_PATH/organizr
+mkdir -p $CONFIG_DIRECTORY_PATH/portainer_data
+chown -R ubuntu:ubuntu $CONFIG_DIRECTORY_PATH
+
+mkdir -p $DATA_DIRECTORY_PATH/Movies
+mkdir -p $DATA_DIRECTORY_PATH/TV
+mkdir -p $DATA_DIRECTORY_PATH/Music
+mkdir -p $DATA_DIRECTORY_PATH/Photos
+chown -R ubuntu:ubuntu $DATA_DIRECTORY_PATH
+
 # Docker containers setup
 cd /tmp/pms-aws-cloudformation
 docker network create web
