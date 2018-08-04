@@ -147,11 +147,11 @@ export DATA_DIRECTORY_PATH=/media
 export CONFIG_DIRECTORY_PATH=/media/config
 export DOWNLOADS_DIRECTORY_PATH=/cache/data/Downloads
 export HOST_NAME=ibhi.tk
-mkdir -p /cache/config/letsencrypt
-chown -R ubuntu:ubuntu /cache/config/letsencrypt
-touch /cache/config/letsencrypt/acme.json
-chown ubuntu:ubuntu /cache/config/letsencrypt/acme.json
-chmod 600 /cache/config/letsencrypt/acme.json
+mkdir -p \${CONFIG_DIRECTORY_PATH}/letsencrypt
+chown -R ubuntu:ubuntu \${CONFIG_DIRECTORY_PATH}/letsencrypt
+touch \${CONFIG_DIRECTORY_PATH}/letsencrypt/acme.json
+chown ubuntu:ubuntu \${CONFIG_DIRECTORY_PATH}/letsencrypt/acme.json
+chmod 600 \${CONFIG_DIRECTORY_PATH}/letsencrypt/acme.json
 # Docker containers setup
 cd /tmp/pms-aws-cloudformation
 docker network create web
