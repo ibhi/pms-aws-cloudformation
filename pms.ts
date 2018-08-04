@@ -158,7 +158,8 @@ mkdir -p $CONFIG_DIRECTORY_PATH/nzbget
 mkdir -p $CONFIG_DIRECTORY_PATH/sonarr
 mkdir -p $CONFIG_DIRECTORY_PATH/radarr
 mkdir -p $CONFIG_DIRECTORY_PATH/plexpy
-mkdir -p $CONFIG_DIRECTORY_PATH/organizr
+# mkdir -p $CONFIG_DIRECTORY_PATH/organizr
+mkdir -p $CONFIG_DIRECTORY_PATH/heimdall
 mkdir -p $CONFIG_DIRECTORY_PATH/portainer_data
 chown -R ubuntu:ubuntu $CONFIG_DIRECTORY_PATH
 
