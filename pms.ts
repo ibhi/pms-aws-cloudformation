@@ -21,6 +21,7 @@ export ALLOCATION_ID=\${ElasticIp.AllocationId}
 cd /tmp
 git clone https://github.com/ibhi/pms-aws-cloudformation.git
 cd pms-aws-cloudformation
+git checkout feature/encrypt-gdrive
 npm install
 node gdrive.js
 cd ..
@@ -125,7 +126,7 @@ ExecStart=/usr/bin/rclone mount \
     --vfs-read-chunk-size-limit 1G  \
     --cache-dir=/cache/rclone  \
     --config /home/ubuntu/.config/rclone/rclone.conf \
-    Gdrive:Media \${MOUNTTO}
+    Gcrypt: \${MOUNTTO}
 ExecStop=/bin/fusermount -u -z \${MOUNTTO}
 ExecStop=/bin/rmdir \${MOUNTTO}
 Restart=always

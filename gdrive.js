@@ -48,15 +48,14 @@ client.getSecretValue({ SecretId: secretName }, function (err, data) {
             service_account_file = 
             token = {"access_token":"${secret.access_token}","token_type":"Bearer","refresh_token":"${secret.refresh_token}","expiry":"${secret.expiry}"}
 
-            [Gcache]
-            type = cache
-            remote = Gdrive:Media
-            plex_url = http://localhost:32400
-            plex_username = ${secret.plex_username}
-            plex_password = ${secret.plex_pwd}
-            chunk_size = 10M
-            info_age = 48h
-            chunk_total_size = 30G
+            [Gcrypt]
+            type = crypt
+            remote = Gdrive:/crypt
+            filename_encryption = standard
+            directory_name_encryption = true
+            password = ${secret.encryption_password}
+            password2 = ${secret.encryption_salt}
+
             `
             fs.writeFile('/home/ubuntu/.config/rclone/rclone.conf', fileContent, (err) => {
                 if (err) throw err;
