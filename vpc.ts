@@ -42,17 +42,17 @@ function createStack(callback) {
                 ParameterKey: 'KeyName',
                 ParameterValue: 'personal-media-server'
             },
-            {
-                ParameterKey: 'SpotPrice',
-                ParameterValue: '0.1'
-            },
+            // {
+            //     ParameterKey: 'SpotPrice',
+            //     ParameterValue: '0.1'
+            // },
             {
                 ParameterKey: 'DomainName',
                 ParameterValue: 'ibhi.tk'
             },
             {
                 ParameterKey: 'CacheSnapshotId',
-                ParameterValue: 'snap-01f85e7c0b6f9b82f'
+                ParameterValue: 'snap-08b17b5c98f1138d3'
             },
             {
                 ParameterKey: 'GDriveSecret',
@@ -100,7 +100,7 @@ function deleteStack(callback) {
 `;
 
 export default cloudform({
-    Description: 'AWS Cloudformation template for personal media center on AWS using EC2 Spot',
+    Description: 'AWS Cloudformation template for personal media center on AWS using EC2 Spot, this template provisions only VPC and network related components',
     Mappings: {
         CidrMappings: {
             PublicSubnet1: {
@@ -123,6 +123,10 @@ export default cloudform({
             Description: 'Enter your custom domain name',
             Default: 'ibhi.tk'
         }),
+        RootBucketEndpoint: new StringParameter({
+            Description: 'Root bucket endpoint of your website',
+            Default: 's3-website-ap-south-1.amazonaws.com'
+        })
     },
     Outputs: {
         VPC: {
@@ -225,6 +229,30 @@ export default cloudform({
         HostedZone: new Route53.HostedZone({
             Name: Fn.Ref('DomainName')
         }),
+
+        // Pre-requisite: Create two buckets(one for root domain and another for www) with proper access control or bucket policy
+        WWWDomainRecordSet: new Route53.RecordSet({
+            Type: 'A',
+            HostedZoneId: Fn.Ref('HostedZone'),
+            Name: Fn.Join('.', [ 'www', Fn.Ref('DomainName')]),
+            TTL: '300',
+            AliasTarget: new Route53.RecordSet.AliasTarget({
+                HostedZoneId: Fn.Ref('HostedZone'),
+                DNSName: Fn.Sub('s3-website-${region}.amazonaws.com', { region: Refs.Region })
+            })
+                
+        }).dependsOn(['HostedZone']),
+
+        RootDomainRecordSet: new Route53.RecordSet({
+            Type: 'A',
+            HostedZoneId: Fn.Ref('HostedZone'),
+            Name: Fn.Ref('DomainName'),
+            TTL: '300',
+            AliasTarget: new Route53.RecordSet.AliasTarget({
+                HostedZoneId: Fn.Ref('HostedZone'),
+                DNSName: Fn.Sub('s3-website-${region}.amazonaws.com', { region: Refs.Region })
+            })   
+        }).dependsOn(['HostedZone']),
 
         SecurityGroup: new EC2.SecurityGroup({
             GroupDescription: 'Personal Media Server Security Group',

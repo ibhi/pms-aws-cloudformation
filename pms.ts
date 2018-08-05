@@ -120,7 +120,7 @@ ExecStart=/usr/bin/rclone mount \
     --vfs-cache-mode full \
     --dir-cache-time=96h  \
     --buffer-size=500M \
-    --vfs-cache-max-age 48h \
+    --vfs-cache-max-age 1h \
     --vfs-read-chunk-size 200M \
     --vfs-read-chunk-size-limit 1G  \
     --cache-dir=/cache/rclone  \
@@ -254,17 +254,17 @@ export default cloudform({
             Description: 'Description: Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instances',
             Type: 'AWS::EC2::KeyPair::KeyName'
         },
-        SpotPrice: new NumberParameter({
-            Description: 'Spot Instance Bid Price',
-            Default: 0.1
-        }),
+        // SpotPrice: new NumberParameter({
+        //     Description: 'Spot Instance Bid Price',
+        //     Default: 0.1
+        // }),
         DomainName: new StringParameter({
             Description: 'Enter your custom domain name',
             Default: 'ibhi.tk'
         }),
         CacheSnapshotId: new StringParameter({
             Description: 'Enter your cache snapshot id to restore',
-            Default: 'snap-0a25e24bf1c7160cb'
+            Default: 'snap-08b17b5c98f1138d3'
         }),
         GDriveSecret: new StringParameter({
             Description: 'Enter GDrive Secret Id from AWS Secrets Manager',
@@ -305,7 +305,7 @@ export default cloudform({
                 AllocationStrategy: 'lowestPrice',
                 Type: 'maintain',
                 IamFleetRole: Fn.GetAtt('SpotFleetRole', 'Arn'),
-                SpotPrice: Fn.Ref('SpotPrice'),
+                // SpotPrice: Fn.Ref('SpotPrice'),
                 TargetCapacity: 1,
                 TerminateInstancesWithExpiration: true,
                 LaunchSpecifications: [
@@ -365,8 +365,8 @@ function createLaunchSpecification(instanceType: Value<string>) {
             new EC2.SpotFleet.BlockDeviceMapping({
                 DeviceName: '/dev/sdk',
                 Ebs: new EC2.SpotFleet.EbsBlockDevice({
-                    VolumeSize: 40,
-                    VolumeType: 'gp2',
+                    VolumeSize: 100,
+                    VolumeType: 'st1',
                     DeleteOnTermination: true,
                     SnapshotId: Fn.Ref('CacheSnapshotId')
                 })

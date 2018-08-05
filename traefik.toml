@@ -21,6 +21,27 @@ defaultEntryPoints = ["https","http"]
       [entryPoints.traefik.auth.basic]
       usersFile = '/.htpasswd'
 
+################################################################
+# API and dashboard configuration
+################################################################
+
+# Enable API and dashboard
+[api]
+
+  # Name of the related entry point
+  #
+  # Optional
+  # Default: "traefik"
+  #
+  # entryPoint = "traefik"
+
+  # Enabled Dashboard
+  #
+  # Optional
+  # Default: true
+  #
+  dashboard = true
+
 [retry]
 
 [docker]
