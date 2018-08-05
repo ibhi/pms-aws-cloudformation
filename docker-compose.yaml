@@ -16,7 +16,7 @@ services:
     container_name: traefik
 
   plex:
-    image: linuxserver/plex
+    image: linuxserver/plex:latest
     container_name: plex
     volumes:
       - '${CONFIG_DIRECTORY_PATH}/plex:/config'
@@ -156,6 +156,7 @@ services:
     volumes:
       - '${CONFIG_DIRECTORY_PATH}/heimdall:/config'
     expose:
+      - '80'
       - '443'
     env_file: uidgid.env
     restart: always
@@ -167,7 +168,6 @@ services:
       - 'traefik.docker.network=web'
       - 'traefik.frontend.rule=Host:home.${HOST_NAME}'
       - 'traefik.enable=true'
-      - 'traefik.port=443'
 
   portainer:
     image: portainer/portainer

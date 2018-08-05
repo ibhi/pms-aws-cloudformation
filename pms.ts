@@ -143,7 +143,7 @@ systemctl start rclone.service
 
 # Docker compose
 export DATA_DIRECTORY_PATH=/media
-export CONFIG_DIRECTORY_PATH=/media/config
+export CONFIG_DIRECTORY_PATH=/cache/config
 export DOWNLOADS_DIRECTORY_PATH=/cache/data/Downloads
 export HOST_NAME=ibhi.tk
 
@@ -264,7 +264,7 @@ export default cloudform({
         }),
         CacheSnapshotId: new StringParameter({
             Description: 'Enter your cache snapshot id to restore',
-            Default: 'snap-01f85e7c0b6f9b82f'
+            Default: 'snap-095b5b2e68981bf0b'
         }),
         GDriveSecret: new StringParameter({
             Description: 'Enter GDrive Secret Id from AWS Secrets Manager',
