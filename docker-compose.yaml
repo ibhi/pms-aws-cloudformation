@@ -116,6 +116,28 @@ services:
       - 'traefik.enable=true'
       - 'traefik.port=7878'
 
+  lidarr:
+    image: linuxserver/lidarr
+    container_name: lidarr
+    volumes:
+      - '${CONFIG_DIRECTORY_PATH}/lidarr:/config'
+      - '${DATA_DIRECTORY_PATH}/Music:/music'
+      - '${DOWNLOADS_DIRECTORY_PATH}:/downloads'
+      - '/etc/localtime:/etc/localtime:ro'
+    expose: 
+      - '8686'
+    env_file: uidgid.env
+    restart: always
+    networks: 
+      - web
+      - default
+    labels:
+      - 'traefik.backend=lidarr'
+      - 'traefik.docker.network=web'
+      - 'traefik.frontend.rule=Host:lidarr.${HOST_NAME}'
+      - 'traefik.enable=true'
+      - 'traefik.port=8686'
+
   plexpy:
     image: linuxserver/tautulli
     container_name: plexpy
@@ -136,25 +158,6 @@ services:
       - 'traefik.frontend.rule=Host:plexpy.${HOST_NAME}'
       - 'traefik.enable=true'
       - 'traefik.port=8181'
-
-  # organizr:
-  #   image: lsiocommunity/organizr
-  #   container_name: organizr
-  #   volumes:
-  #     - '${CONFIG_DIRECTORY_PATH}/organizr:/config'
-  #   expose:
-  #     - '80'
-  #   env_file: uidgid.env
-  #   restart: always
-  #   networks: 
-  #     - web
-  #     - default
-  #   labels:
-  #     - 'traefik.backend=organizr'
-  #     - 'traefik.docker.network=web'
-  #     - 'traefik.frontend.rule=Host:home.${HOST_NAME}'
-  #     - 'traefik.enable=true'
-  #     - 'traefik.port=80'
 
   heimdall:
     image: linuxserver/heimdall

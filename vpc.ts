@@ -10,15 +10,32 @@ const cloudformation = new AWS.CloudFormation();
 
 exports.handler = (event, context, callback) => {
     console.log('Event', event);
-    const messageId = event.Records[0].Sns.MessageId;
-    const message = event.Records[0].Sns.Message;
+    
+    const done = (err, res) => callback(null, {
+        statusCode: err ? '400' : '200',
+        body: err ? err.message : JSON.stringify(res),
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
 
-    if(message === 'CREATE') {
-        createStack(callback);
-    } else if(message === 'DELETE') {
-        deleteStack(callback);
-    } else {
-        callback(err);
+    switch (event.httpMethod) {
+        case 'DELETE':
+            console.log('Delete called');
+            deleteStack(done);
+            break;
+        case 'GET':
+            console.log('Get called');
+            break;
+        case 'POST':
+            console.log('Post called');
+            createStack(done);
+            break;
+        // case 'PUT':
+        //     dynamo.updateItem(JSON.parse(event.body), done);
+        //     break;
+        default:
+            done(new Error('Unsupported method ' + event.httpMethod));
     }
 
 };
@@ -42,10 +59,6 @@ function createStack(callback) {
                 ParameterKey: 'KeyName',
                 ParameterValue: 'personal-media-server'
             },
-            // {
-            //     ParameterKey: 'SpotPrice',
-            //     ParameterValue: '0.1'
-            // },
             {
                 ParameterKey: 'DomainName',
                 ParameterValue: 'ibhi.tk'
@@ -60,7 +73,7 @@ function createStack(callback) {
             }
             /* more items */
         ],
-        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}',
+        RoleARN: 'arn:aws:iam::782677160809:role/pms-vpc-PMSCloudFormationStackCreationRole-1OGB0T61EUYFF',
         Tags: [
             {
                 Key: 'Name', /* required */
@@ -70,33 +83,18 @@ function createStack(callback) {
         ],
         TemplateURL: 'https://s3.ap-south-1.amazonaws.com/cf-templates-1g7z2nh3wiuu3-ap-south-1/pms.json',
     };
-    cloudformation.createStack(params, (err, data) => {
-        if (err) {
-            console.log(err, err.stack); // an error occurred
-            callback(err);
-        } else {
-            console.log(data);           // successful response
-            callback(null, data);
-        }
-    });
+    cloudformation.createStack(params, callback);
 }
 
 function deleteStack(callback) {
     const params = {
         // Todo: make it dynamic
         StackName: 'pms',
-        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}'
+        RoleARN: 'arn:aws:iam::782677160809:role/pms-vpc-PMSCloudFormationStackCreationRole-1OGB0T61EUYFF'
     };
-    cloudformation.deleteStack(params, (err, data) => {
-        if (err) {
-            console.log(err, err.stack); // an error occurred
-            callback(err);
-        } else {
-            console.log(data);           // successful response
-            callback(null, data);
-        }
-    });
+    cloudformation.deleteStack(params, callback);
 }
+
 `;
 
 export default cloudform({
@@ -112,6 +110,17 @@ export default cloudform({
             VPC: {
                 CIDR: '10.0.0.0/16'
             }
+        },
+        RegionMap : {
+            "ap-south-1": { "S3hostedzoneID" : "Z11RGJOFQNVJUP", "websiteendpoint" : "s3-website.ap-south-1.amazonaws.com" },
+            "us-east-1" : { "S3hostedzoneID" : "Z3AQBSTGFYJSTF", "websiteendpoint" : "s3-website-us-east-1.amazonaws.com" },
+            "us-west-1" : { "S3hostedzoneID" : "Z2F56UZL2M1ACD", "websiteendpoint" : "s3-website-us-west-1.amazonaws.com" },
+            "us-west-2" : { "S3hostedzoneID" : "Z3BJ6K6RIION7M", "websiteendpoint" : "s3-website-us-west-2.amazonaws.com" },            
+            "eu-west-1" : { "S3hostedzoneID" : "Z1BKCTXD74EZPE", "websiteendpoint" : "s3-website-eu-west-1.amazonaws.com" },
+            "ap-southeast-1" : { "S3hostedzoneID" : "Z3O0J2DXBE1FTB", "websiteendpoint" : "s3-website-ap-southeast-1.amazonaws.com" },
+            "ap-southeast-2" : { "S3hostedzoneID" : "Z1WCIGYICN2BYD", "websiteendpoint" : "s3-website-ap-southeast-2.amazonaws.com" },
+            "ap-northeast-1" : { "S3hostedzoneID" : "Z2M4EHUR26P7ZW", "websiteendpoint" : "s3-website-ap-northeast-1.amazonaws.com" },
+            "sa-east-1" : { "S3hostedzoneID" : "Z31GFT0UA1I2HV", "websiteendpoint" : "s3-website-sa-east-1.amazonaws.com" }
         }
     },
     Parameters: {
@@ -123,9 +132,9 @@ export default cloudform({
             Description: 'Enter your custom domain name',
             Default: 'ibhi.tk'
         }),
-        RootBucketEndpoint: new StringParameter({
-            Description: 'Root bucket endpoint of your website',
-            Default: 's3-website-ap-south-1.amazonaws.com'
+        PMSApiGateway: new StringParameter({
+            Description: 'PMS API Gateway ARN',
+            Default: 'arn:aws:execute-api:ap-south-1:782677160809:bq6doqcg65/*/*/*'
         })
     },
     Outputs: {
@@ -231,28 +240,27 @@ export default cloudform({
         }),
 
         // Pre-requisite: Create two buckets(one for root domain and another for www) with proper access control or bucket policy
-        WWWDomainRecordSet: new Route53.RecordSet({
-            Type: 'A',
+        DomainRecordSetGroup: new Route53.RecordSetGroup({
             HostedZoneId: Fn.Ref('HostedZone'),
-            Name: Fn.Join('.', [ 'www', Fn.Ref('DomainName')]),
-            TTL: '300',
-            AliasTarget: new Route53.RecordSet.AliasTarget({
-                HostedZoneId: Fn.Ref('HostedZone'),
-                DNSName: Fn.Sub('s3-website-${region}.amazonaws.com', { region: Refs.Region })
-            })
-                
-        }).dependsOn(['HostedZone']),
-
-        RootDomainRecordSet: new Route53.RecordSet({
-            Type: 'A',
-            HostedZoneId: Fn.Ref('HostedZone'),
-            Name: Fn.Ref('DomainName'),
-            TTL: '300',
-            AliasTarget: new Route53.RecordSet.AliasTarget({
-                HostedZoneId: Fn.Ref('HostedZone'),
-                DNSName: Fn.Sub('s3-website-${region}.amazonaws.com', { region: Refs.Region })
-            })   
-        }).dependsOn(['HostedZone']),
+            RecordSets: [
+                new Route53.RecordSetGroup.RecordSet({
+                    Type: 'A',
+                    Name: Fn.Ref('DomainName'),
+                    AliasTarget: new Route53.RecordSet.AliasTarget({
+                        HostedZoneId: Fn.FindInMap('RegionMap', Refs.Region, 'S3hostedzoneID'),
+                        DNSName: Fn.FindInMap('RegionMap', Refs.Region, 'websiteendpoint')
+                    })
+                }),
+                new Route53.RecordSetGroup.RecordSet({
+                    Type: 'A',
+                    Name: Fn.Join('.', ['www', Fn.Ref('DomainName')]),
+                    AliasTarget: new Route53.RecordSet.AliasTarget({
+                        HostedZoneId: Fn.FindInMap('RegionMap', Refs.Region, 'S3hostedzoneID'),
+                        DNSName: Fn.FindInMap('RegionMap', Refs.Region, 'websiteendpoint')
+                    })
+                })
+            ]
+        }).dependsOn('HostedZone'),
 
         SecurityGroup: new EC2.SecurityGroup({
             GroupDescription: 'Personal Media Server Security Group',
@@ -311,29 +319,29 @@ export default cloudform({
             DependsOn: ['PMSLambdaExecutionRole', 'PMSCloudFormationStackCreationRole']
         },
 
-        PMSSNSTopic: {
-            Type: 'AWS::SNS::Topic',
-            Properties: {
-                TopicName: 'PMS_STACK',
-                Subscription: [
-                    {
-                        Endpoint: 'arn:aws:lambda:ap-south-1:782677160809:function:CreatePMSStackLambdaFunction',
-                        Protocol: 'lambda'
-                    }
-                ]
-            },
-            // DependsOn: 'CreatePMSStackLambdaFunction'
-        },
+        // PMSSNSTopic: {
+        //     Type: 'AWS::SNS::Topic',
+        //     Properties: {
+        //         TopicName: 'PMS_STACK',
+        //         Subscription: [
+        //             {
+        //                 Endpoint: 'arn:aws:lambda:ap-south-1:782677160809:function:CreatePMSStackLambdaFunction',
+        //                 Protocol: 'lambda'
+        //             }
+        //         ]
+        //     },
+        //     // DependsOn: 'CreatePMSStackLambdaFunction'
+        // },
 
         PMSLambdaResourcePolicy: {
             Type: 'AWS::Lambda::Permission',
             Properties: {
                 FunctionName: Fn.Ref('CreatePMSStackLambdaFunction'),
-                Principal: 'sns.amazonaws.com',
+                Principal: 'apigateway.amazonaws.com',
                 Action: 'lambda:InvokeFunction',
-                SourceArn: Fn.Ref('PMSSNSTopic')
+                SourceArn: Fn.Ref('PMSApiGateway')
             },
-            DependsOn: ['CreatePMSStackLambdaFunction', 'PMSSNSTopic']
+            DependsOn: ['CreatePMSStackLambdaFunction']
         }
     }
 });
