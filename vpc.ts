@@ -73,7 +73,7 @@ function createStack(callback) {
             }
             /* more items */
         ],
-        RoleARN: 'arn:aws:iam::782677160809:role/pms-vpc-PMSCloudFormationStackCreationRole-1OGB0T61EUYFF',
+        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}',
         Tags: [
             {
                 Key: 'Name', /* required */
@@ -90,7 +90,7 @@ function deleteStack(callback) {
     const params = {
         // Todo: make it dynamic
         StackName: 'pms',
-        RoleARN: 'arn:aws:iam::782677160809:role/pms-vpc-PMSCloudFormationStackCreationRole-1OGB0T61EUYFF'
+        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}'
     };
     cloudformation.deleteStack(params, callback);
 }

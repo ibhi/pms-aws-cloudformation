@@ -366,7 +366,7 @@ function createLaunchSpecification(instanceType: Value<string>) {
                 DeviceName: '/dev/sdk',
                 Ebs: new EC2.SpotFleet.EbsBlockDevice({
                     VolumeSize: 100,
-                    VolumeType: 'st1',
+                    VolumeType: 'gp2',
                     DeleteOnTermination: true,
                     SnapshotId: Fn.Ref('CacheSnapshotId')
                 })
