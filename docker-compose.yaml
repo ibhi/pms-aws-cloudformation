@@ -156,7 +156,7 @@ services:
     volumes:
       - '${CONFIG_DIRECTORY_PATH}/heimdall:/config'
     expose:
-      - '80'
+      - '443'
     env_file: uidgid.env
     restart: always
     networks: 
@@ -167,7 +167,7 @@ services:
       - 'traefik.docker.network=web'
       - 'traefik.frontend.rule=Host:home.${HOST_NAME}'
       - 'traefik.enable=true'
-      - 'traefik.port=80'
+      - 'traefik.port=443'
 
   portainer:
     image: portainer/portainer
