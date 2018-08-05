@@ -264,7 +264,7 @@ export default cloudform({
         }),
         CacheSnapshotId: new StringParameter({
             Description: 'Enter your cache snapshot id to restore',
-            Default: 'snap-095b5b2e68981bf0b'
+            Default: 'snap-0a25e24bf1c7160cb'
         }),
         GDriveSecret: new StringParameter({
             Description: 'Enter GDrive Secret Id from AWS Secrets Manager',

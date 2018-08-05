@@ -1,6 +1,10 @@
 debug = false
 
+# Todo: Not safe, workaround to make heimdall work with ssl
+insecureSkipVerify = true
+
 logLevel = "ERROR"
+
 defaultEntryPoints = ["https","http"]
 
 [entryPoints]
@@ -10,7 +14,12 @@ defaultEntryPoints = ["https","http"]
     entryPoint = "https"
   [entryPoints.https]
   address = ":443"
-  [entryPoints.https.tls]
+    [entryPoints.https.tls]
+  [entryPoints.traefik]
+  address = ':8080'
+    [entryPoints.traefik.auth]
+      [entryPoints.traefik.auth.basic]
+      usersFile = '/.htpasswd'
 
 [retry]
 

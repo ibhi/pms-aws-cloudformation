@@ -61,6 +61,10 @@ client.getSecretValue({ SecretId: secretName }, function (err, data) {
                 if (err) throw err;
                 console.log('/home/ubuntu/.config/rclone/rclone.conf file successfully created');
             });
+            fs.writeFile('/tmp/pms-aws-cloudformation/.htpasswd', `${secret.http_username}:${secret.http_password}`, (err) => {
+                if (err) throw err;
+                console.log('/tmp/pms-aws-cloudformation/.htpasswd file successfully created');
+            });
         } else {
             binarySecretData = data.SecretBinary;
         }

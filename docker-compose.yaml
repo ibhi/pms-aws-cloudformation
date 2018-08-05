@@ -12,8 +12,14 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/pms-aws-cloudformation/traefik.toml:/traefik.toml
+      - /tmp/pms-aws-cloudformation/.htpasswd:/.htpasswd
       - /cache/config/letsencrypt/acme.json:/acme.json
     container_name: traefik
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=web'
+      - 'traefik.port=8080'
+      - 'traefik.frontend.rule=Host:traefik.${HOST_NAME}'
 
   plex:
     image: linuxserver/plex:latest
@@ -24,15 +30,15 @@ services:
       - '${DATA_DIRECTORY_PATH}/Movies:/data/movies'
       - '${DATA_DIRECTORY_PATH}/Music:/data/music'
     ports: 
-      - "32400:32400/tcp"
-      - "3005:3005/tcp"
-      - "8324:8324/tcp"
-      - "32469:32469/tcp"
-      - "1900:1900/udp"
-      - "32410:32410/udp"
-      - "32412:32412/udp"
-      - "32413:32413/udp"
-      - "32414:32414/udp"
+      - '32400:32400/tcp'
+      - '3005:3005/tcp'
+      - '8324:8324/tcp'
+      - '32469:32469/tcp'
+      - '1900:1900/udp'
+      - '32410:32410/udp'
+      - '32412:32412/udp'
+      - '32413:32413/udp'
+      - '32414:32414/udp'
     env_file: uidgid.env
     restart: always
     # network_mode: host
@@ -168,6 +174,8 @@ services:
       - 'traefik.docker.network=web'
       - 'traefik.frontend.rule=Host:home.${HOST_NAME}'
       - 'traefik.enable=true'
+      - 'traefik.port=443'
+      - 'traefik.protocol=https'
 
   portainer:
     image: portainer/portainer

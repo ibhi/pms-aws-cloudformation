@@ -246,6 +246,12 @@ export default cloudform({
                     FromPort: 443,
                     ToPort: 443,
                     IpProtocol: 'tcp'
+                }),
+                new EC2.SecurityGroup.Ingress({
+                    CidrIp: Fn.Ref('SourceCidr'),
+                    FromPort: 32400,
+                    ToPort: 32400,
+                    IpProtocol: 'tcp'
                 })
             ],
             VpcId: Fn.Ref('VPC')
