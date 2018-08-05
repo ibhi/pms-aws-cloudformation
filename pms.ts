@@ -143,15 +143,16 @@ systemctl start rclone.service
 
 # Docker compose
 export DATA_DIRECTORY_PATH=/media
-export CONFIG_DIRECTORY_PATH=/cache/config
+export CONFIG_DIRECTORY_PATH=/media/config
 export DOWNLOADS_DIRECTORY_PATH=/cache/data/Downloads
 export HOST_NAME=ibhi.tk
 
-mkdir -p /cache/data/letsencrypt
-chown -R ubuntu:ubuntu /cache/data/letsencrypt
-touch /cache/data/letsencrypt/acme.json
-chown ubuntu:ubuntu /cache/data/letsencrypt/acme.json
-chmod 600 /cache/data/letsencrypt/acme.json
+# Lets encrypt certificate
+mkdir -p /cache/config/letsencrypt
+chown -R ubuntu:ubuntu /cache/config/letsencrypt
+touch /cache/config/letsencrypt/acme.json
+chown ubuntu:ubuntu /cache/config/letsencrypt/acme.json
+chmod 600 /cache/config/letsencrypt/acme.json
 
 mkdir -p $CONFIG_DIRECTORY_PATH/plex
 mkdir -p $CONFIG_DIRECTORY_PATH/nzbget

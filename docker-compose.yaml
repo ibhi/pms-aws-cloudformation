@@ -12,7 +12,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/pms-aws-cloudformation/traefik.toml:/traefik.toml
-      - /cache/data/letsencrypt/acme.json:/acme.json
+      - /cache/config/letsencrypt/acme.json:/acme.json
     container_name: traefik
 
   plex:
