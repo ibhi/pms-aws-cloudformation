@@ -1,3 +1,7 @@
+/* This lambda scans a dynamodb table named `snaps` and for each snapshot entry in the table, 
+* it fetches the latest state of the snapshot from AWS and updates the status field of the snapshot in table from `pending`
+** to `completed`
+*/
 const region = 'ap-south-1';
 
 var AWS = require('aws-sdk');
@@ -17,7 +21,7 @@ exports.handler = (event, context, callback) => {
         .then(data => {
             // For each snapshot entry present in db
             data.Items.forEach(snapshot => {
-                console.log('Snapshot from db', snapshot);
+                console.log(`Snapshot ${snapshot.SnapshotId} from db`);
                 const snapshotId = snapshot.SnapshotId;
                 const previousState = snapshot.State;
                 const params = {
@@ -26,7 +30,7 @@ exports.handler = (event, context, callback) => {
                 // Describe the snapshot using id and get current state of the snapshot
                 ec2.describeSnapshots(params).promise()
                     .then(snapshotCurrent => {
-                        console.log('Snapshot from describe', snapshotCurrent, snapshotCurrent.Snapshots);
+                        console.log(`Describe snapshot ${snapshotCurrent.Snapshots[0].SnapshotId}`);
                         const currentState = snapshotCurrent.Snapshots[0].State;
                         // If currentState is 'completed' and previousState is 'pending' then update the snapshot status field in db to 'completed'
                         if (previousState === 'pending' && currentState === 'completed') {
