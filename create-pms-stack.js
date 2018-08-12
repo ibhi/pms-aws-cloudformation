@@ -7,15 +7,32 @@ const cloudformation = new AWS.CloudFormation();
 
 exports.handler = (event, context, callback) => {
     console.log('Event', event);
-    const messageId = event.Records[0].Sns.MessageId;
-    const message = event.Records[0].Sns.Message;
+    
+    const done = (err, res) => callback(null, {
+        statusCode: err ? '400' : '200',
+        body: err ? err.message : JSON.stringify(res),
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
 
-    if(message === 'CREATE') {
-        createStack(callback);
-    } else if(message === 'DELETE') {
-        deleteStack(callback);
-    } else {
-        callback(err);
+    switch (event.httpMethod) {
+        case 'DELETE':
+            console.log('Delete called');
+            deleteStack(done);
+            break;
+        case 'GET':
+            console.log('Get called');
+            break;
+        case 'POST':
+            console.log('Post called');
+            createStack(done);
+            break;
+        // case 'PUT':
+        //     dynamo.updateItem(JSON.parse(event.body), done);
+        //     break;
+        default:
+            done(new Error('Unsupported method ' + event.httpMethod));
     }
 
 };
@@ -40,16 +57,12 @@ function createStack(callback) {
                 ParameterValue: 'personal-media-server'
             },
             {
-                ParameterKey: 'SpotPrice',
-                ParameterValue: '0.1'
-            },
-            {
                 ParameterKey: 'DomainName',
                 ParameterValue: 'ibhi.tk'
             },
             {
                 ParameterKey: 'CacheSnapshotId',
-                ParameterValue: 'snap-01f85e7c0b6f9b82f'
+                ParameterValue: 'snap-08b17b5c98f1138d3'
             },
             {
                 ParameterKey: 'GDriveSecret',
@@ -67,15 +80,7 @@ function createStack(callback) {
         ],
         TemplateURL: 'https://s3.ap-south-1.amazonaws.com/cf-templates-1g7z2nh3wiuu3-ap-south-1/pms.json',
     };
-    cloudformation.createStack(params, (err, data) => {
-        if (err) {
-            console.log(err, err.stack); // an error occurred
-            callback(err);
-        } else {
-            console.log(data);           // successful response
-            callback(null, data);
-        }
-    });
+    cloudformation.createStack(params, callback);
 }
 
 function deleteStack(callback) {
@@ -84,13 +89,5 @@ function deleteStack(callback) {
         StackName: 'pms',
         RoleARN: '\${PMSCloudFormationStackCreationRoleArn}'
     };
-    cloudformation.deleteStack(params, (err, data) => {
-        if (err) {
-            console.log(err, err.stack); // an error occurred
-            callback(err);
-        } else {
-            console.log(data);           // successful response
-            callback(null, data);
-        }
-    });
+    cloudformation.deleteStack(params, callback);
 }

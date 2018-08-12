@@ -1,101 +1,6 @@
 import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, Route53 } from 'cloudform';
 
-const createPMSStackLambdaFunction = `
-const region = 'ap-south-1';
-
-var AWS = require('aws-sdk');
-AWS.config.update({ region: region });
-
-const cloudformation = new AWS.CloudFormation();
-
-exports.handler = (event, context, callback) => {
-    console.log('Event', event);
-    
-    const done = (err, res) => callback(null, {
-        statusCode: err ? '400' : '200',
-        body: err ? err.message : JSON.stringify(res),
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
-
-    switch (event.httpMethod) {
-        case 'DELETE':
-            console.log('Delete called');
-            deleteStack(done);
-            break;
-        case 'GET':
-            console.log('Get called');
-            break;
-        case 'POST':
-            console.log('Post called');
-            createStack(done);
-            break;
-        // case 'PUT':
-        //     dynamo.updateItem(JSON.parse(event.body), done);
-        //     break;
-        default:
-            done(new Error('Unsupported method ' + event.httpMethod));
-    }
-
-};
-
-function createStack(callback) {
-    const params = {
-        StackName: 'pms', /* required */
-        Capabilities: [
-            'CAPABILITY_NAMED_IAM'
-        ],
-        Parameters: [
-            {
-                ParameterKey: 'NetworkStackName',
-                ParameterValue: 'pms-vpc'
-            },
-            {
-                ParameterKey: 'SourceCidr',
-                ParameterValue: '0.0.0.0/0'
-            },
-            {
-                ParameterKey: 'KeyName',
-                ParameterValue: 'personal-media-server'
-            },
-            {
-                ParameterKey: 'DomainName',
-                ParameterValue: 'ibhi.tk'
-            },
-            {
-                ParameterKey: 'CacheSnapshotId',
-                ParameterValue: 'snap-08b17b5c98f1138d3'
-            },
-            {
-                ParameterKey: 'GDriveSecret',
-                ParameterValue: 'arn:aws:secretsmanager:ap-south-1:782677160809:secret:gdrive-token-EFr0g3'
-            }
-            /* more items */
-        ],
-        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}',
-        Tags: [
-            {
-                Key: 'Name', /* required */
-                Value: 'pms' /* required */
-            },
-            /* more items */
-        ],
-        TemplateURL: 'https://s3.ap-south-1.amazonaws.com/cf-templates-1g7z2nh3wiuu3-ap-south-1/pms.json',
-    };
-    cloudformation.createStack(params, callback);
-}
-
-function deleteStack(callback) {
-    const params = {
-        // Todo: make it dynamic
-        StackName: 'pms',
-        RoleARN: '\${PMSCloudFormationStackCreationRoleArn}'
-    };
-    cloudformation.deleteStack(params, callback);
-}
-
-`;
+const fs = require('fs');
 
 export default cloudform({
     Description: 'AWS Cloudformation template for personal media center on AWS using EC2 Spot, this template provisions only VPC and network related components',
@@ -305,10 +210,8 @@ export default cloudform({
                 Description: 'Lambda function to create PMS stack',
                 Role: Fn.GetAtt('PMSLambdaExecutionRole', 'Arn'),
                 Code: {
-                    // S3Bucket: 'cf-templates-1g7z2nh3wiuu3-ap-south-1',
-                    // S3Key: 'pms-create-stack-lambda.zip'
                     ZipFile: Fn.Sub(
-                        createPMSStackLambdaFunction,
+                        createPMSStackLambdaFunction(),
                         {
                             PMSCloudFormationStackCreationRoleArn: Fn.GetAtt('PMSCloudFormationStackCreationRole', 'Arn')
                         }
@@ -319,20 +222,6 @@ export default cloudform({
             DependsOn: ['PMSLambdaExecutionRole', 'PMSCloudFormationStackCreationRole']
         },
 
-        // PMSSNSTopic: {
-        //     Type: 'AWS::SNS::Topic',
-        //     Properties: {
-        //         TopicName: 'PMS_STACK',
-        //         Subscription: [
-        //             {
-        //                 Endpoint: 'arn:aws:lambda:ap-south-1:782677160809:function:CreatePMSStackLambdaFunction',
-        //                 Protocol: 'lambda'
-        //             }
-        //         ]
-        //     },
-        //     // DependsOn: 'CreatePMSStackLambdaFunction'
-        // },
-
         PMSLambdaResourcePolicy: {
             Type: 'AWS::Lambda::Permission',
             Properties: {
@@ -342,7 +231,63 @@ export default cloudform({
                 SourceArn: Fn.Ref('PMSApiGateway')
             },
             DependsOn: ['CreatePMSStackLambdaFunction']
-        }
+        },
+
+        SnapshotManagementLambdaExecutionRole: createSnapshotManagementLambdaExecutionRole(),
+
+        CreateSnapshotLambdaFunction: {
+            Type: 'AWS::Lambda::Function',
+            Properties: {
+                Handler: 'index.handler',
+                FunctionName: 'CreateSnapshotLambdaFunction',
+                Description: 'Lambda function to create Snapshot from PMS spot fleet instance Ebs volume and add an entry in DynamoDB snaps table',
+                Role: Fn.GetAtt('SnapshotManagementLambdaExecutionRole', 'Arn'),
+                Code: {
+                    ZipFile: Fn.Sub(
+                        createSnapshotLambdaFunction(),
+                        { }
+                    )
+                },
+                Runtime: 'nodejs6.10'
+            },
+            DependsOn: ['SnapshotManagementLambdaExecutionRole']
+        },
+
+        ChangeSnapshotStateLambdaFunction: {
+            Type: 'AWS::Lambda::Function',
+            Properties: {
+                Handler: 'index.handler',
+                FunctionName: 'ChangeSnapshotStateLambdaFunction',
+                Description: 'This function updates the status of snapshots in DynamoDB table to completed after completion of the snapshot',
+                Role: Fn.GetAtt('SnapshotManagementLambdaExecutionRole', 'Arn'),
+                Code: {
+                    ZipFile: Fn.Sub(
+                        changeSnapshotStateLambdaFunction(),
+                        { }
+                    )
+                },
+                Runtime: 'nodejs6.10'
+            },
+            DependsOn: ['SnapshotManagementLambdaExecutionRole']
+        },
+
+        DeleteSnapshotLambdaFunction: {
+            Type: 'AWS::Lambda::Function',
+            Properties: {
+                Handler: 'index.handler',
+                FunctionName: 'DeleteSnapshotLambdaFunction',
+                Description: 'Lambda function to delete Snapshots older than a day also remove the entry from DynamoDB snaps table',
+                Role: Fn.GetAtt('SnapshotManagementLambdaExecutionRole', 'Arn'),
+                Code: {
+                    ZipFile: Fn.Sub(
+                        deleteSnapshotLambdaFunction(),
+                        { }
+                    )
+                },
+                Runtime: 'nodejs6.10'
+            },
+            DependsOn: ['SnapshotManagementLambdaExecutionRole']
+        },
     }
 });
 
@@ -449,6 +394,126 @@ function createPmsLambdaExecutionRole() {
     }
 }
 
+function createSnapshotManagementLambdaExecutionRole() {
+    return {
+        Type: 'AWS::IAM::Role',
+        Properties: {
+            AssumeRolePolicyDocument: {
+                Statement: [
+                    {
+                        Effect: 'Allow',
+                        Principal: {
+                            Service: ['lambda.amazonaws.com']
+                        },
+                        Action: ['sts:AssumeRole']
+                    }
+                ],
+                Version: '2012-10-17'
+            },
+            Path: '/',
+            Policies: [
+                {
+                    PolicyDocument: {
+                        Version: '2012-10-17',
+                        Statement: [{
+                            Effect: 'Allow',
+                            Action: [
+                                'logs:CreateLogGroup',
+                                'logs:CreateLogStream',
+                                'logs:PutLogEvents',
+                                'logs:DescribeLogStreams'
+                            ],
+                            Resource: ['arn:aws:logs:*:*:*']
+                        }]
+                    },
+                    PolicyName: 'SnapshotManagementCloudWatchLogsPolicy'
+                },
+                {
+                    PolicyDocument: {
+                        Version: "2012-10-17",
+                        Statement: [
+                            {
+                                Effect: "Allow",
+                                Action: [
+                                    "cloudformation:Describe*",
+                                    "cloudformation:Get*",
+                                    "cloudformation:List*",
+                                ],
+                                Resource: "arn:aws:cloudformation:ap-south-1:*:stack/pms/*"
+                            }
+                        ]
+                    },
+                    PolicyName: 'SnapshotManagementCloudformationDescribePolicy'
+                },
+                {
+                    PolicyDocument: {
+                        Version: '2012-10-17',
+                        Statement: [
+                            {
+                                Effect: "Allow",
+                                Action: "ec2:Describe*",
+                                Resource: "*"
+                            }
+                        ]
+                    },
+                    PolicyName: 'SnapshotManagementEC2DescribePolicy'
+                },
+                {
+                    PolicyDocument: {
+                        Version: "2012-10-17",
+                        Statement: [
+                            {
+                                Effect: "Allow",
+                                Action: [
+                                    "ec2:CreateTags",
+                                    "ec2:CreateSnapshot",
+                                    "ec2:DeleteSnapshot"
+                                ],
+                                Resource: [
+                                    "arn:aws:ec2:*::snapshot/*",
+                                    "arn:aws:ec2:*:*:volume/*"
+                                ]
+                            }
+                        ]
+                    },
+                    PolicyName: 'SnapshotManagementCreateSnapshotPolicy'
+                },
+                {
+                    PolicyDocument: {
+                        Version: "2012-10-17",
+                        Statement: [
+                            {
+                                Effect: "Allow",
+                                Action: [
+                                    "dynamodb:PutItem",
+                                    "dynamodb:DescribeTable",
+                                    "dynamodb:DeleteItem",
+                                    "dynamodb:GetItem",
+                                    "dynamodb:Scan",
+                                    "dynamodb:Query",
+                                    "dynamodb:UpdateItem"
+                                ],
+                                Resource: "arn:aws:dynamodb:ap-south-1:*:table/snaps"
+                            },
+                            {
+                                Effect: "Allow",
+                                Action: [
+                                    "dynamodb:TagResource",
+                                    "dynamodb:UntagResource",
+                                    "dynamodb:ListTables",
+                                    "dynamodb:ListTagsOfResource"
+                                ],
+                                Resource: "*"
+                            }
+                        ]
+                    },
+                    PolicyName: 'SnapshotManagementDynamoDBUpdatePolicy'
+                }
+            ]
+        }
+    }
+}
+
 function createPMSCloudFormationStackCreationRole() {
     return {
         Type: 'AWS::IAM::Role',
@@ -543,4 +608,20 @@ function createPMSCloudFormationStackCreationRole() {
             ]
         }
     }
+}
+
+function createSnapshotLambdaFunction() {
+    return fs.readFileSync('./create-snapshot.js', 'UTF-8');
+}
+
+function createPMSStackLambdaFunction() {
+    return fs.readFileSync('./create-pms-stack.js', 'UTF-8');
+}
+
+function changeSnapshotStateLambdaFunction() {
+    return fs.readFileSync('./change-state-snapshot.js', 'UTF-8');
+}
+
+function deleteSnapshotLambdaFunction() {
+    return fs.readFileSync('./delete-snapshot.js', 'UTF-8');
 }

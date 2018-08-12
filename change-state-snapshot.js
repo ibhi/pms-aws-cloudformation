@@ -21,7 +21,7 @@ exports.handler = (event, context, callback) => {
         .then(data => {
             // For each snapshot entry present in db
             data.Items.forEach(snapshot => {
-                console.log(`Snapshot ${snapshot.SnapshotId} from db`);
+                console.log('Snapshot ' + snapshot.SnapshotId + ' from db');
                 const snapshotId = snapshot.SnapshotId;
                 const previousState = snapshot.State;
                 const params = {
@@ -30,14 +30,15 @@ exports.handler = (event, context, callback) => {
                 // Describe the snapshot using id and get current state of the snapshot
                 ec2.describeSnapshots(params).promise()
                     .then(snapshotCurrent => {
-                        console.log(`Describe snapshot ${snapshotCurrent.Snapshots[0].SnapshotId}`);
+                        console.log('Describe snapshot ' + snapshotCurrent.Snapshots[0].SnapshotId );
                         const currentState = snapshotCurrent.Snapshots[0].State;
                         // If currentState is 'completed' and previousState is 'pending' then update the snapshot status field in db to 'completed'
                         if (previousState === 'pending' && currentState === 'completed') {
                             var updateparams = {
                                 TableName: 'snaps',
                                 Key: {
-                                    "SnapshotId": snapshotId
+                                    'SnapshotId': snapshotId,
+                                    'CreatedDate': snapshot.CreatedDate
                                 },
                                 UpdateExpression: "SET #estate =:s",
 								ExpressionAttributeNames:{

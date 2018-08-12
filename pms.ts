@@ -254,10 +254,6 @@ export default cloudform({
             Description: 'Description: Name of an existing EC2 KeyPair to enable SSH access to the EC2 Instances',
             Type: 'AWS::EC2::KeyPair::KeyName'
         },
-        // SpotPrice: new NumberParameter({
-        //     Description: 'Spot Instance Bid Price',
-        //     Default: 0.1
-        // }),
         DomainName: new StringParameter({
             Description: 'Enter your custom domain name',
             Default: 'ibhi.tk'

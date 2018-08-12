@@ -11,6 +11,9 @@ const ec2 = new AWS.EC2();
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
+// Only keep the snapshots if they are one or less than one days old
+const retentionTargetDays = 1;
+
 exports.handler = (event, context, callback) => {
     // TODO implement
     const params = {
@@ -44,9 +47,9 @@ exports.handler = (event, context, callback) => {
             });
             
             snapshots.forEach((snapshot, index) => {
-                console.log(`Snapshot ${snapshot.SnapshotId}, CreatedDate: ${snapshot.CreatedDateString}  from db`);
+                console.log('Snapshot ' + snapshot.SnapshotId + ' CreatedDate: ' + snapshot.CreatedDateString + ' from db');
                 // Do not delete the last snapshot, simply quit
-                if(index === (data.Items.length -1) ) {
+                if(index === (snapshots.length -1) ) {
                     return callback(null, 'This is the last snapshot available, so not deleting it');
                 }
                 
@@ -64,14 +67,14 @@ exports.handler = (event, context, callback) => {
                 const snapshotId = snapshot.SnapshotId; //snapshotId holds the DynamoDb table "Snaps" primary key or HashId
                 const snapshotLifeTime = snapshot.day;
 
-                if (0 <= numberOfDays && snapshot.State === 'completed') {
+                if (retentionTargetDays <= numberOfDays && snapshot.State === 'completed') {
                     const params = {
                         SnapshotId: snapshotId
                     };
 
                     ec2.deleteSnapshot(params).promise()
                         .then(data => {
-                            console.log(`Deleted ${snapshotId}, createdAt: ${snapshot.CreatedDateString}`);
+                            console.log('Deleted ' + snapshotId + 'createdAt: ' + snapshot.CreatedDateString + 'from Snapshots');
                             const params = {
                                 TableName: 'snaps',
                                 Key: {
@@ -81,7 +84,7 @@ exports.handler = (event, context, callback) => {
                             };
                             
                             dynamodb.delete(params).promise()
-                                .then(data => callback(null, data))
+                                .then(data => console.log('Deleted ' + snapshotId + 'createdAt: ' + snapshot.CreatedDateString + 'from DynamoDB'))
                                 .catch(callback);
                             
                         })
