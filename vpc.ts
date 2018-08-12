@@ -388,6 +388,22 @@ function createPmsLambdaExecutionRole() {
                         ]
                     },
                     PolicyName: 'PMSLambdaIAMCFNRoleReadOnly'
+                },
+                {
+                    PolicyDocument: {
+                        Version: "2012-10-17",
+                        Statement: [
+                            {
+                                Effect: "Allow",
+                                Action: [
+                                    "dynamodb:DescribeTable",
+                                    "dynamodb:Scan"
+                                ],
+                                Resource: "arn:aws:dynamodb:ap-south-1:*:table/snaps"
+                            }
+                        ]
+                    },
+                    PolicyName: 'PMSLambdaDynamoDBScanPolicy'
                 }
             ]
         }
