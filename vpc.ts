@@ -1,4 +1,4 @@
-import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, Route53 } from 'cloudform';
+import cloudform, { Fn, Refs, EC2, StringParameter, ResourceTag, Route53, Events } from 'cloudform';
 
 const fs = require('fs');
 
@@ -253,6 +253,30 @@ export default cloudform({
             DependsOn: ['SnapshotManagementLambdaExecutionRole']
         },
 
+        CreateSnapshotEvent: new Events.Rule({
+            Name: 'CreateSnapshotEvent',
+            Description: 'Event to trigger create snapshot lambda function',
+            ScheduleExpression: 'cron(0 12 * * ? *)',
+            State: 'ENABLED',
+            Targets: [
+                new Events.Rule.Target({
+                    Id: 'CreateSnapshotLambdaFunction',
+                    Arn: Fn.GetAtt('CreateSnapshotLambdaFunction', 'Arn')
+                })
+            ]
+        }).dependsOn(['CreateSnapshotLambdaFunction']),
+
+        CreateSnapshotLambdaPermission: {
+            Type: 'AWS::Lambda::Permission',
+            Properties: {
+                FunctionName: Fn.Ref('CreateSnapshotLambdaFunction'),
+                Principal: 'events.amazonaws.com',
+                Action: 'lambda:InvokeFunction',
+                SourceArn: Fn.GetAtt('CreateSnapshotEvent', 'Arn')
+            },
+            DependsOn: ['CreateSnapshotLambdaFunction']
+        },
+
         ChangeSnapshotStateLambdaFunction: {
             Type: 'AWS::Lambda::Function',
             Properties: {
@@ -271,6 +295,30 @@ export default cloudform({
             DependsOn: ['SnapshotManagementLambdaExecutionRole']
         },
 
+        ChangeSnapshotEvent: new Events.Rule({
+            Name: 'ChangeSnapshotEvent',
+            Description: 'Event to trigger change snapshot status lambda function',
+            ScheduleExpression: 'cron(0 13 * * ? *)',
+            State: 'ENABLED',
+            Targets: [
+                new Events.Rule.Target({
+                    Id: 'ChangeSnapshotStateLambdaFunction',
+                    Arn: Fn.GetAtt('ChangeSnapshotStateLambdaFunction', 'Arn')
+                })
+            ]
+        }).dependsOn(['ChangeSnapshotStateLambdaFunction']),
+
+        ChangeSnapshotLambdaPermission: {
+            Type: 'AWS::Lambda::Permission',
+            Properties: {
+                FunctionName: Fn.Ref('ChangeSnapshotStateLambdaFunction'),
+                Principal: 'events.amazonaws.com',
+                Action: 'lambda:InvokeFunction',
+                SourceArn: Fn.GetAtt('ChangeSnapshotEvent', 'Arn')
+            },
+            DependsOn: ['ChangeSnapshotStateLambdaFunction']
+        },
+
         DeleteSnapshotLambdaFunction: {
             Type: 'AWS::Lambda::Function',
             Properties: {
@@ -287,6 +335,30 @@ export default cloudform({
                 Runtime: 'nodejs6.10'
             },
             DependsOn: ['SnapshotManagementLambdaExecutionRole']
+        },
+
+        DeleteSnapshotEvent: new Events.Rule({
+            Name: 'DeleteSnapshotEvent',
+            Description: 'Event to trigger delete snapshot lambda function',
+            ScheduleExpression: 'cron(0 14 * * ? *)',
+            State: 'ENABLED',
+            Targets: [
+                new Events.Rule.Target({
+                    Id: 'DeleteSnapshotLambdaFunction',
+                    Arn: Fn.GetAtt('DeleteSnapshotLambdaFunction', 'Arn')
+                })
+            ]
+        }).dependsOn(['DeleteSnapshotLambdaFunction']),
+
+        DeleteSnapshotLambdaPermission: {
+            Type: 'AWS::Lambda::Permission',
+            Properties: {
+                FunctionName: Fn.Ref('DeleteSnapshotLambdaFunction'),
+                Principal: 'events.amazonaws.com',
+                Action: 'lambda:InvokeFunction',
+                SourceArn: Fn.GetAtt('DeleteSnapshotEvent', 'Arn')
+            },
+            DependsOn: ['DeleteSnapshotLambdaFunction']
         },
     }
 });
